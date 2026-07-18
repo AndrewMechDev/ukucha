@@ -1,9 +1,18 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import SideNav from "./SideNav";
+import Alerts from "../pages/Alerts";
+import Settings from "../pages/Settings";
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const panel = new URLSearchParams(location.search).get("panel");
+
+  const closePanel = () => {
+    navigate({ pathname: location.pathname, search: "" });
+  };
 
   return (
     <div className={`app-shell${collapsed ? " app-shell--collapsed" : ""}`}>
@@ -11,6 +20,8 @@ export default function Layout() {
       <main className="main-viewport">
         <Outlet />
       </main>
+      {panel === "alerts" && <Alerts onClose={closePanel} />}
+      {panel === "settings" && <Settings onClose={closePanel} />}
     </div>
   );
 }
