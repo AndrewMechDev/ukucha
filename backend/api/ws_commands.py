@@ -1,8 +1,8 @@
-"""Canal de comandos: el panel web envia set_motors/set_leds/camera_restart
-por WebSocket (tiempo real, /ws/commands) o REST (conveniencia/testing,
-POST /api/commands). Ambos delegan en CommandService, que valida
-parametros, asigna cmd_id, determina el target_node, y escribe por el
-enlace serial.
+"""Canal de comandos: el panel web envia set_actuators (luces + 2 motores,
+el unico comando que soporta el firmware real) por WebSocket (tiempo real,
+/ws/commands) o REST (conveniencia/testing, POST /api/commands). Ambos
+delegan en CommandService, que valida parametros, asigna cmd_id, y escribe
+el comando por UDP hacia el ESP32-S3 de campo.
 """
 from __future__ import annotations
 

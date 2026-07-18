@@ -47,7 +47,6 @@ def build_enriched_output(result: dict, telemetry_store: TelemetryStore) -> Enri
 
     audio = telemetry_store.get_audio()
     env = telemetry_store.get_env()
-    motors = env.pop("motors", None)
 
     image_b64 = "data:image/jpeg;base64," + base64.b64encode(result["annotated_jpeg"]).decode("ascii")
 
@@ -75,5 +74,4 @@ def build_enriched_output(result: dict, telemetry_store: TelemetryStore) -> Enri
         ),
         audio=AudioState(**audio),
         env=EnvState(**env),
-        motors=motors,
     )
