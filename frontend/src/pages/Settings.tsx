@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import StyledSelect from "../components/StyledSelect";
+import PanelModal from "../components/PanelModal";
 
 type SettingsCategory = "general" | "operation" | "thresholds" | "language" | "about";
 
@@ -18,11 +19,17 @@ export default function Settings({ onClose }: { onClose?: () => void }) {
   const [language, setLanguage] = useState("Español");
   const [category, setCategory] = useState<SettingsCategory>("general");
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   return (
-    <div className="settings-panel-backdrop" role="presentation" onClick={() => onClose?.()}>
-      <section className="settings-panel-modal" role="dialog" aria-modal="true" aria-labelledby="settings-panel-title" onClick={(event) => event.stopPropagation()}>
-        <header className="settings-panel-header"><div><p className="eyebrow">CONFIGURACIÓN DEL SISTEMA</p><h1 id="settings-panel-title">Ajustes</h1></div><button className="settings-panel-close" type="button" onClick={() => onClose?.()} aria-label="Cerrar ajustes"><span className="material-symbols-rounded">close</span></button></header>
-        <div className="settings-panel-layout">
+    <PanelModal eyebrow="CONFIGURACIÓN DEL SISTEMA" title="Ajustes" titleId="settings-panel-title" onClose={() => onClose?.()} className="settings-panel-modal">
+      <div className="settings-panel-layout">
           <nav className="settings-category-nav" aria-label="Categorías de ajustes">
             {([
               ["general", "tune", "General"],
@@ -39,8 +46,7 @@ export default function Settings({ onClose }: { onClose?: () => void }) {
             {category === "language" && <SettingSection title="Idioma"><div className="settings-row"><div><strong>Idioma</strong><span>Idioma de la interfaz y mensajes del sistema</span></div><StyledSelect ariaLabel="Idioma" value={language} onChange={setLanguage} options={[{ label: "Español", value: "Español" }, { label: "English", value: "English" }]} /></div></SettingSection>}
             {category === "about" && <SettingSection title="Acerca de"><div className="settings-about"><strong>v0.1.0 · Build de hackathon</strong><p>Ukucha — asistencia SAR inspirada en la biomímesis y el trabajo de APOPO.</p></div></SettingSection>}
           </div>
-        </div>
-      </section>
-    </div>
+      </div>
+    </PanelModal>
   );
 }

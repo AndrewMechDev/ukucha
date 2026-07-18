@@ -120,11 +120,6 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
           ))}
         </nav>
 
-        <footer className="side-nav__footer">
-          <span className="system-status__dot" aria-hidden="true" />
-          {!collapsed && <span className="system-status__label">N unidades activas</span>}
-          {collapsed && <span className="glass-tooltip">N unidades activas</span>}
-        </footer>
       </aside>
 
       <nav className="bottom-nav" aria-label="Navegación principal">

@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AudioMetricCard,
-  EnvironmentMetricCard,
-  LocationMetricCard,
+  UnitSummaryCard,
   type TelemetrySnapshot,
 } from "../components/TelemetryCards";
 
@@ -19,10 +17,10 @@ type Unit = {
 };
 
 const units: Unit[] = [
-  { id: "Ukucha-01", zone: "Zona Norte", status: "safe", statusLabel: "SEGURO", updated: "hace 12s", telemetry: { audio: { left: 6.5, right: 5.6 }, environment: { temperatureC: 28.4, humidityPercent: 34.2, pressureHpa: 783.1 }, gps: { latitude: -16.3988, longitude: -71.5369, valid: true } } },
-  { id: "Ukucha-02", zone: "Zona Sur", status: "caution", statusLabel: "PRECAUCIÓN", updated: "hace 38s", telemetry: { audio: { left: 12.4, right: 10.8 }, environment: { temperatureC: 29.1, humidityPercent: 36.8, pressureHpa: 782.9 }, gps: { latitude: -16.3994, longitude: -71.5358, valid: true } } },
-  { id: "Ukucha-03", zone: "Zona Este", status: "critical", statusLabel: "CRÍTICO", updated: "hace 4s", telemetry: { audio: { left: 14.3, right: 12.7 }, environment: { temperatureC: 29.2, humidityPercent: 33.5, pressureHpa: 783.0 }, gps: { latitude: -16.3979, longitude: -71.5347, valid: true } } },
-  { id: "Ukucha-04", zone: "Zona Oeste", status: "offline", statusLabel: "OFFLINE", updated: "hace 18m", telemetry: { audio: { left: null, right: null }, environment: { temperatureC: null, humidityPercent: null, pressureHpa: null }, gps: { latitude: null, longitude: null, valid: false } } },
+  { id: "Ukucha-01", zone: "Zona Norte", status: "safe", statusLabel: "Seguro", updated: "hace 12s", telemetry: { audio: { left: 6.5, right: 5.6 }, environment: { temperatureC: 28.4, humidityPercent: 34.2, pressureHpa: 783.1 }, gps: { latitude: -16.3988, longitude: -71.5369, valid: true } } },
+  { id: "Ukucha-02", zone: "Zona Sur", status: "caution", statusLabel: "Precaución", updated: "hace 38s", telemetry: { audio: { left: 12.4, right: 10.8 }, environment: { temperatureC: 29.1, humidityPercent: 36.8, pressureHpa: 782.9 }, gps: { latitude: -16.3994, longitude: -71.5358, valid: true } } },
+  { id: "Ukucha-03", zone: "Zona Este", status: "critical", statusLabel: "Crítico", updated: "hace 4s", telemetry: { audio: { left: 14.3, right: 12.7 }, environment: { temperatureC: 29.2, humidityPercent: 33.5, pressureHpa: 783.0 }, gps: { latitude: -16.3979, longitude: -71.5347, valid: true } } },
+  { id: "Ukucha-04", zone: "Zona Oeste", status: "offline", statusLabel: "Offline", updated: "hace 18m", telemetry: { audio: { left: null, right: null }, environment: { temperatureC: null, humidityPercent: null, pressureHpa: null }, gps: { latitude: null, longitude: null, valid: false } } },
 ];
 
 const icons = {
@@ -49,11 +47,7 @@ function UnitCard({ unit, onSelect }: { unit: Unit; onSelect: (unit: Unit) => vo
         <div><p className="fleet-unit-card__overline">UNIDAD DE CAMPO</p><h2>{unit.id}</h2><span>{unit.zone}</span></div>
         <div className="fleet-unit-card__status"><span className={`fleet-status-tag fleet-status-tag--${unit.status}`}>{unit.statusLabel}</span><time>{unit.updated}</time></div>
       </header>
-      <div className="fleet-unit-card__metrics">
-        <EnvironmentMetricCard temperature={unit.telemetry.environment.temperatureC} humidity={unit.telemetry.environment.humidityPercent} size="compact" />
-        <AudioMetricCard left={unit.telemetry.audio.left} right={unit.telemetry.audio.right} size="compact" />
-      </div>
-      <LocationMetricCard latitude={unit.telemetry.gps.latitude} longitude={unit.telemetry.gps.longitude} valid={unit.telemetry.gps.valid} zone={unit.zone} size="compact" />
+      <UnitSummaryCard battery={unit.status === "critical" ? 42 : unit.status === "caution" ? 58 : 70} sensorValue={unit.status === "critical" ? "19.6%" : "28.4°C"} sensorLabel={unit.status === "critical" ? "O₂" : "TEMP"} />
       <footer className="fleet-unit-card__footer"><span>PRESIÓN</span><strong>{unit.telemetry.environment.pressureHpa === null ? "N/D" : `${unit.telemetry.environment.pressureHpa.toFixed(1)} hPa`}</strong><b>{unit.status === "offline" ? "SIN DATOS" : "ABRIR DASHBOARD →"}</b></footer>
     </article>
   );
@@ -74,6 +68,14 @@ type LinkStep = "methods" | "scanning" | "results" | "success";
 
 function LinkUnitModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<LinkStep>("methods");
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     if (step !== "scanning") return undefined;
@@ -147,7 +149,7 @@ export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
 
   const selectUnit = (unit: Unit) => {
-    if (unit.status !== "offline") navigate(`/unit/${unit.id.toLowerCase()}`);
+    if (unit.status !== "offline") navigate(`/unit/${unit.id.toLowerCase()}/sensors`);
   };
 
   return (

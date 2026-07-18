@@ -1,4 +1,5 @@
 import mousePositionImage from "../../raton_posicion.png";
+import ukuchaCardImage from "../../ukucha_card.png";
 
 export type TelemetrySnapshot = {
   audio: { left: number | null; right: number | null };
@@ -20,6 +21,33 @@ const waveformPoints = "0,28 10,22 20,34 30,14 40,26 50,18 60,37 70,23 80,31 90,
 
 function valueOrPlaceholder(value: number | null, digits = 1) {
   return value === null ? "N/D" : value.toFixed(digits);
+}
+
+export function UnitSummaryCard({
+  battery = 70,
+  sensorValue = "19.6%",
+  sensorLabel = "O₂",
+}: {
+  battery?: number;
+  sensorValue?: string;
+  sensorLabel?: string;
+}) {
+  return (
+    <section className="unit-summary-card" aria-label="Resumen de la unidad">
+      <div className="unit-summary-card__telemetry">
+        <span className="telemetry-card__label">BATERÍA</span>
+        <strong>{battery}%</strong>
+        <div className={`battery-meter battery-meter--${battery >= 80 ? "high" : battery >= 30 ? "medium" : "low"}`} aria-hidden="true">
+          {Array.from({ length: 10 }, (_, index) => <i className={index < Math.round(battery / 10) ? "is-filled" : ""} key={index} />)}
+        </div>
+        <div className="unit-summary-card__sensor">
+          <span>SENSOR PRIORITARIO</span>
+          <strong>{sensorLabel} <b>{sensorValue}</b></strong>
+        </div>
+      </div>
+      <img src={ukuchaCardImage} alt="Ukucha exploradora" />
+    </section>
+  );
 }
 
 export function AudioMetricCard({
