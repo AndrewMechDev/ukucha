@@ -2,6 +2,8 @@
 
 Monorepo del proyecto Ukucha.
 
+**Python**: 3.12.10 | **Node**: 24+
+
 ## Estructura
 
 ```
@@ -22,6 +24,7 @@ ukucha/
 │   │   ├── hooks/
 │   │   └── services/
 │   └── public/
+├── .python-version   # Python 3.12.10
 └── README.md
 ```
 
@@ -31,8 +34,8 @@ ukucha/
 
 ```bash
 cd backend
-python -m venv .venv
-.venv\Scripts\activate   # Windows
+py -3.12 -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
@@ -44,3 +47,5 @@ cd frontend
 npm install
 npm run dev
 ```
+
+El frontend corre en `http://localhost:5173` y el proxy de Vite redirige `/api/*` al backend en `http://localhost:8000`.
