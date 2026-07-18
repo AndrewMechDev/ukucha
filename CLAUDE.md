@@ -11,8 +11,9 @@ personas bajo escombros. Dos pipelines de captura comparten la misma capa
 de deteccion (ver `.claude/skills/ukucha/sistema.md`):
 
 1. **Webcam** (`ukucha_detector.py` / `webcam_fall.py`) — demo local.
-2. **Hardware ESP32** (`backend/`) — pipeline serial+deteccion+WS+Supabase
-   para el robot real (4 placas: ESP32-CAM + 3x ESP32-S3). Ver
+2. **Hardware ESP32** (`backend/`) — pipeline WiFi+deteccion+WS+Supabase
+   para el robot real (2 placas via WiFi, sin USB: ESP32-CAM + 1x ESP32-S3
+   de campo). Ver
    `.claude/skills/ukucha/backend-conexion.md`.
 
 ## Stack
@@ -23,7 +24,9 @@ de deteccion (ver `.claude/skills/ukucha/sistema.md`):
 - OpenCV para captura y visualizacion
 - FastAPI: `server.py` (telemetria de gases, legado) y `backend/app.py`
   (pipeline completo sobre hardware ESP32, WebSocket + Supabase)
-- pyserial (enlace full-duplex con el hardware), supabase-py (persistencia)
+- Enlace 100% WiFi con el hardware (UDP para sensores/comandos, HTTP MJPEG
+  para video; sin USB/serial -- ver `.claude/skills/ukucha/backend-conexion.md`),
+  supabase-py (persistencia)
 
 ## Ejecutar
 
@@ -40,7 +43,7 @@ venv\Scripts\python.exe -m uvicorn backend.app:app --host 0.0.0.0 --port 8000
 - `ukucha_detector.py` — pipeline unificado webcam (3 detectores + fusion)
 - `webcam_fall.py` — detector de caidas standalone (copia propia, no importa de `detectors/`)
 - `detectors/` — clases reusables: `FallDetector`, `EppDetector`, `RescueDetector`
-- `backend/` — pipeline serial+deteccion+WebSocket+Supabase (hardware ESP32);
+- `backend/` — pipeline WiFi+deteccion+WebSocket+Supabase (hardware ESP32);
   ver `.claude/skills/ukucha/backend-conexion.md` para la arquitectura completa
 - `server.py` — backend FastAPI legado para telemetria de gases y frames
 - `requirements.txt` — dependencias pinneadas (exacto match con el venv)

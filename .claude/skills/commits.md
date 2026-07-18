@@ -30,7 +30,7 @@ Usa **Conventional Commits** en español con esta estructura:
 |---------|----------|
 | `detector` | ukucha_detector.py, detectors/*.py, webcam_fall.py |
 | `server` | server.py — backend FastAPI |
-| `backend` | backend/ — pipeline serial+deteccion+WS+Supabase (hardware ESP32) |
+| `backend` | backend/ — pipeline WiFi+deteccion+WS+Supabase (hardware ESP32) |
 | `config` | .gitignore, requirements.txt, configs |
 | `skills` | .claude/skills/ (incluye ukucha/backend-conexion.md, skills-sync.md) |
 

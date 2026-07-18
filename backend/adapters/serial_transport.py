@@ -1,10 +1,17 @@
-"""Adapter de Transport sobre pyserial: puerto USB real hacia ESP32-S3 No3."""
+"""Adapter de Transport sobre pyserial: puerto USB real hacia ESP32-S3 No3.
+
+HISTORICO / SIN USO -- el hardware real quedo confirmado 100% WiFi (ver
+UdpTransport y .claude/skills/ukucha/backend-conexion.md): no hay ni va a
+haber enlace USB. `app.py` nunca importa esta clase; se conserva solo como
+referencia del diseño original con dongle serial. `pyserial` NO esta en
+requirements.txt (se saco por no tener uso real), por eso el import queda
+perezoso adentro de open() -- este modulo se puede seguir importando sin
+romper nada aunque pyserial no este instalado.
+"""
 from __future__ import annotations
 
 import logging
 from typing import Optional
-
-import serial
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +28,8 @@ class SerialTransport:
     def open(self) -> None:
         if self.is_open:
             return
+        import serial  # import perezoso -- ver nota "HISTORICO / SIN USO" arriba
+
         self._ser = serial.Serial(
             port=self._port,
             baudrate=self._baudrate,
@@ -42,6 +51,8 @@ class SerialTransport:
     def readline(self) -> Optional[bytes]:
         if self._ser is None:
             return None
+        import serial  # import perezoso -- ver nota "HISTORICO / SIN USO" arriba
+
         try:
             line = self._ser.readline()
         except (serial.SerialException, OSError) as e:
@@ -55,6 +66,8 @@ class SerialTransport:
     def write(self, data: bytes) -> int:
         if self._ser is None:
             raise ConnectionError(f"Puerto serial {self._port} no esta abierto")
+        import serial  # import perezoso -- ver nota "HISTORICO / SIN USO" arriba
+
         try:
             return self._ser.write(data)
         except (serial.SerialException, OSError) as e:

@@ -38,7 +38,7 @@ hacerla — **nunca edita nada sin confirmacion explicita del usuario**.
    - Cambios en `detectors/epp_detector.py` → `ukucha/epp-detector.md`
    - Cambios en `detectors/rescue_detector.py` → `ukucha/rescue-detector.md`
    - Cambios en `ukucha_detector.py`, arquitectura general, stack, hardware → `ukucha/sistema.md`
-   - Cambios en `backend/` (pipeline serial+deteccion+WS+Supabase) → `ukucha/backend-conexion.md`
+   - Cambios en `backend/` (pipeline WiFi+deteccion+WS+Supabase) → `ukucha/backend-conexion.md`
    - Cambios en convenciones de commits → `commits.md`
    - Modulo nuevo sin skill dueña → proponer crear una skill nueva, no
      forzarlo dentro de una existente
@@ -72,5 +72,5 @@ hacerla — **nunca edita nada sin confirmacion explicita del usuario**.
 | `ukucha/epp-detector.md` | EPP y clasificacion victima/rescatista |
 | `ukucha/rescue-detector.md` | Entorno/escombros (DRespNeT) |
 | `ukucha/server.md` | Backend FastAPI original (telemetria de gases) |
-| `ukucha/backend-conexion.md` | Backend serial+deteccion+WS+Supabase (`backend/`) |
+| `ukucha/backend-conexion.md` | Backend WiFi+deteccion+WS+Supabase (`backend/`) |
 | `commits.md` | Convenciones de commits |

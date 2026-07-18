@@ -8,7 +8,7 @@ Monorepo del proyecto Ukucha.
 
 ```
 ukucha/
-├── backend/          # Backend v2: enlace serial + deteccion + WebSocket + Supabase
+├── backend/          # Backend v2: enlace WiFi (UDP+MJPEG) + deteccion + WebSocket + Supabase
 │   ├── schemas/      # Pydantic: paquetes uplink/downlink, salida enriquecida
 │   ├── ports/        # Protocols (Transport, PersistenceBackend) — Ports & Adapters
 │   ├── adapters/      # Implementaciones: serial/mock, supabase/null

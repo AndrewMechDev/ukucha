@@ -62,10 +62,10 @@ ukucha-fall-detector/
 │   ├── fall_detector.py        # Clase FallDetector (reusable)
 │   ├── epp_detector.py         # Clase EppDetector (reusable)
 │   └── rescue_detector.py      # Clase RescueDetector (reusable)
-├── backend/                    # Pipeline serial+deteccion+WS+Supabase (hardware ESP32)
+├── backend/                    # Pipeline WiFi+deteccion+WS+Supabase (hardware ESP32)
 │   ├── schemas/                 # Modelos de datos (frames, eventos, telemetria)
 │   ├── ports/                   # Interfaces (Ports & Adapters)
-│   ├── adapters/                # Implementaciones (serial, Supabase, mock)
+│   ├── adapters/                # Implementaciones (UDP/MJPEG, Supabase, mock)
 │   ├── services/                # Logica de orquestacion
 │   ├── api/                     # Rutas WebSocket/HTTP
 │   └── app.py                   # Entry point del backend -- ver ukucha/backend-conexion.md
@@ -86,11 +86,13 @@ EppDetector, RescueDetector + fusion `classify_rubble_victims()` etc. de
 1. **Webcam standalone** — `ukucha_detector.py` / `webcam_fall.py` leen
    directamente de una camara local via `WebcamStream` (OpenCV). Sigue
    funcionando de forma independiente, sin depender de `backend/`.
-2. **Cadena de hardware ESP32** — `backend/` obtiene frames de una cadena de
-   4 nodos (ESP32-CAM + 3x ESP32-S3) via enlace serial, y alimenta la MISMA
-   capa de deteccion y fusion que el modo webcam. Solo cambia la FUENTE del
-   frame; los detectores y la logica de clasificacion de escenarios son
-   compartidos entre ambos modos.
+2. **Hardware ESP32 (WiFi)** — `backend/` obtiene frames del ESP32-CAM
+   (stream HTTP MJPEG) y sensores/comandos del ESP32-S3 de campo (UDP),
+   ambos conectados por WiFi al mismo hotspot que la laptop del backend
+   -- sin USB/serial, ver `.claude/skills/ukucha/backend-conexion.md` --
+   y alimenta la MISMA capa de deteccion y fusion que el modo webcam. Solo
+   cambia la FUENTE del frame; los detectores y la logica de clasificacion
+   de escenarios son compartidos entre ambos modos.
 
 Detalle completo de `backend/` (arquitectura Ports & Adapters, threading,
 rutas WebSocket, persistencia Supabase, etc.): ver `ukucha/backend-conexion.md`.
@@ -461,7 +463,9 @@ lap==0.5.13                   # ByteTrack tracking
 numpy==1.26.4                 # Pinneado (ultralytics <2.0.0 requiere <2.x)
 
 # Dependencias nuevas por backend/ (ver ukucha/backend-conexion.md)
-pyserial==3.5                 # Enlace serial con la cadena de nodos ESP32
+# Sin pyserial: el enlace con los nodos ESP32 es 100% WiFi (UDP + HTTP
+# MJPEG), nunca USB -- backend/adapters/serial_transport.py queda solo
+# como referencia historica sin uso, no aporta una dependencia real.
 supabase==2.31.0              # Persistencia (+ postgrest, realtime, storage3,
 postgrest==2.31.0             #   supabase-auth, supabase-functions como
 realtime==2.31.0              #   dependencias transitivas, mismas versiones)

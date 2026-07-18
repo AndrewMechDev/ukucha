@@ -34,6 +34,44 @@ polvo, y la mejora de precision del GPS, se implementaran en el firmware
 mas adelante — mientras tanto `GasLevels`/`dust_ppm` llegan en `None`/0 y
 el resto del pipeline (deteccion, WS, persistencia) funciona igual.
 
+### Confirmacion definitiva: no hay ni va a haber USB
+
+El compañero de hardware confirmo que la conexion es **100% WiFi,
+permanente** — no es un estado transitorio del prototipo, no hay plan de
+volver a un enlace serial USB en ningun momento. Por eso:
+
+- `backend/adapters/serial_transport.py` (el adapter de `pyserial`/`COM3`
+  de la Fase 1 original) se conserva en el repo **solo como referencia
+  historica**, marcado explicitamente como sin uso en su propio docstring.
+  `app.py` nunca lo importa. Su `import serial` es perezoso (adentro de
+  cada metodo) para que el archivo se pueda seguir importando sin que
+  `pyserial` este instalado.
+- `pyserial` se saco de `requirements.txt` — ya no es una dependencia real
+  del backend.
+- Todas las menciones de `SerialTransport`/`COM3`/`UKUCHA_SERIAL_PORT` en
+  las secciones de abajo (diseño original, Fase 1) son **puramente
+  historicas**: no reflejan una opcion configurable disponible hoy.
+
+**Topologia de red real**: el ESP32-CAM y el ESP32-S3 de campo no arman su
+propio Access Point — se conectan como clientes a **la misma red WiFi que
+genera el hotspot del celular** (no un router fijo). Implicancias
+practicas:
+
+- La IP de cada nodo la asigna el DHCP del hotspot y **puede cambiar entre
+  sesiones** (se corta el hotspot, se reconecta el telefono, etc.) — por
+  eso `UdpTransport` ya autodetecta la IP del ESP32-S3 del primer paquete
+  recibido ([udp_transport.py:75-80](../../../backend/adapters/udp_transport.py)),
+  no hace falta tocar nada ahi.
+- `UKUCHA_CAM_URL` (default `http://192.168.4.1/` en `env.example`) **si
+  hay que actualizarlo a mano cada sesion**: ese default asume que el
+  ESP32-CAM es su propio AP (IP fija tipica de ESP32 en modo AP), pero con
+  hotspot del celular el ESP32-CAM va a tener una IP DHCP distinta —
+  revisar la lista de dispositivos conectados del hotspot (o el firmware,
+  si loguea su IP por serial de debug) para saber cual usar.
+- La PC/laptop que corre el backend tambien tiene que estar conectada a
+  ese mismo hotspot (misma subred), no a la red WiFi habitual — sino
+  `UdpTransport` nunca va a recibir los paquetes UDP de telemetria.
+
 ## Objetivo (diseño original, ver seccion de arriba para el estado real)
 
 `backend/` es el servidor de tiempo real que reemplaza el flujo webcam del
