@@ -20,6 +20,9 @@ const navItems: NavItem[] = [
   { id: "settings", label: "Ajustes", icon: "settings", route: "/settings" },
 ];
 
+const primaryItem = navItems[0];
+const optionItems = navItems.slice(1);
+
 function Brand({ compact = false, onClick }: { compact?: boolean; onClick: () => void }) {
   return (
     <button
@@ -46,9 +49,10 @@ function Brand({ compact = false, onClick }: { compact?: boolean; onClick: () =>
 export default function SideNav({ collapsed, onToggle }: SideNavProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const currentItem: NavItem["id"] = location.pathname.startsWith("/alerts")
+  const panel = new URLSearchParams(location.search).get("panel");
+  const currentItem: NavItem["id"] = panel === "alerts"
     ? "alerts"
-    : location.pathname.startsWith("/settings")
+    : panel === "settings"
       ? "settings"
       : "fleet";
   const [requestedItem, setRequestedItem] = useState<NavItem["id"] | null>(null);
@@ -56,11 +60,15 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
 
   useEffect(() => {
     setRequestedItem(null);
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   const selectItem = (item: NavItem) => {
     setRequestedItem(item.id);
-    navigate(item.route);
+    if (item.id === "fleet") {
+      navigate({ pathname: "/", search: "" });
+      return;
+    }
+    navigate({ pathname: location.pathname, search: `?panel=${item.id}` });
   };
 
   return (
@@ -71,7 +79,27 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
         </header>
 
         <nav className="side-nav__items" aria-label="Navegación principal">
-          {navItems.map((item) => (
+          {[primaryItem].map((item) => (
+            <button
+              className={`nav-item${activeItem === item.id ? " nav-item--active" : ""}`}
+              type="button"
+              key={item.id}
+              onClick={() => selectItem(item)}
+              aria-current={activeItem === item.id ? "page" : undefined}
+              aria-label={collapsed ? item.label : undefined}
+            >
+              <span className="nav-item__icon material-symbols-rounded" aria-hidden="true">{item.icon}</span>
+              {!collapsed && <span className="nav-item__label">{item.label}</span>}
+              {item.badge !== undefined && (
+                <span className="nav-item__badge" aria-label={`${item.badge} alertas críticas sin reconocer`}>
+                  {item.badge}
+                </span>
+              )}
+              {collapsed && <span className="glass-tooltip">{item.label}</span>}
+            </button>
+          ))}
+          {!collapsed && <span className="side-nav__group-label">Opciones</span>}
+          {optionItems.map((item) => (
             <button
               className={`nav-item${activeItem === item.id ? " nav-item--active" : ""}`}
               type="button"

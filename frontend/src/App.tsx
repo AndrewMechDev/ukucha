@@ -1,9 +1,7 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Timeline from "./pages/Timeline";
-import Alerts from "./pages/Alerts";
-import Settings from "./pages/Settings";
 import UnitDashboard from "./pages/UnitDashboard";
 import Copilot from "./pages/Copilot";
 import NotFound from "./pages/NotFound";
@@ -16,8 +14,8 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="timeline" element={<Timeline />} />
           <Route path="copilot" element={<Copilot />} />
-          <Route path="alerts" element={<Alerts />} />
-          <Route path="settings" element={<Settings />} />
+          <Route path="alerts" element={<Navigate to="/?panel=alerts" replace />} />
+          <Route path="settings" element={<Navigate to="/?panel=settings" replace />} />
           <Route path="unit/:unitId" element={<UnitDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Route>

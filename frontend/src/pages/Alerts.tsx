@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import StyledSelect from "../components/StyledSelect";
 
 type Severity = "critical" | "caution";
-type AlertFilter = "Todas" | "Críticas" | "Advertencias";
+type AlertFilter = "Todas" | "Pendientes" | "Reconocidas";
 
 type Alert = {
   id: number;
@@ -31,43 +32,46 @@ const icons = {
   check: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>,
   close: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>,
   filter: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>,
+  detail: <span className="material-symbols-rounded" aria-hidden="true">open_in_full</span>,
 };
 
 function SeverityTag({ severity }: { severity: Severity }) {
-  return <span className={`alerts-status-tag alerts-status-tag--${severity}`}>{severity === "critical" ? "CRÍTICA" : "ADVERTENCIA"}</span>;
+  return <span className={`alerts-status-tag alerts-status-tag--${severity} alerts-filter-chip`}>{severity === "critical" ? "Crítica" : "Advertencia"}</span>;
 }
 
 export function EmptyAlerts() {
   return <div className="alerts-empty"><span className="alerts-empty__badge"><i /> SEGURO</span><h2>Sin alertas activas — todo en orden</h2></div>;
 }
 
-function AlertModal({ alert, onClose, onAcknowledge, onViewUnit }: { alert: Alert; onClose: () => void; onAcknowledge: () => void; onViewUnit: () => void }) {
+function AlertModal({ alert, onBack, onClose, onAcknowledge, onViewUnit }: { alert: Alert; onBack: () => void; onClose: () => void; onAcknowledge: () => void; onViewUnit: () => void }) {
   return (
-    <div className="alerts-modal-backdrop" role="presentation">
-      <section className="alerts-modal" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title">
-        <header><div><p className="eyebrow">CONFIRMAR ALERTA</p><h2 id="alert-modal-title">Confirmar Alerta {alert.severity === "critical" ? "Crítica" : "de Precaución"}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
-        <div className={`alerts-modal__summary alerts-modal__summary--${alert.severity}`}><SeverityTag severity={alert.severity} /><strong>{alert.unit} · {alert.zone}</strong><p>{alert.description}</p><time>{alert.timestamp} · {alert.age}</time></div>
-        <div className="alerts-modal__recommendation"><p>RECOMENDACIÓN DEL COPILOTO</p><strong>{alert.recommendation}</strong></div>
-        <div className="alerts-modal__actions"><button className="alerts-secondary-button" type="button" onClick={onViewUnit}>Ver unidad</button><button className="alerts-secondary-button" type="button" onClick={onClose}>Cerrar</button>{!alert.acknowledged && <button className="alerts-primary-button" type="button" onClick={onAcknowledge}>Reconocer alerta</button>}</div>
-      </section>
-    </div>
+    <section className="alerts-detail-view" aria-labelledby="alert-modal-title">
+      <header className="alerts-detail-header">
+        <button className="alerts-detail-back" type="button" onClick={onBack}><span className="material-symbols-rounded">arrow_back</span><span>Alertas</span></button>
+        <button className="alerts-panel-close" type="button" onClick={onClose} aria-label="Cerrar alertas">{icons.close}</button>
+      </header>
+      <div className="alerts-detail-heading"><p className="eyebrow">DETALLE DE ALERTA</p><h2 id="alert-modal-title">{alert.severity === "critical" ? "Alerta crítica" : "Alerta de precaución"}</h2></div>
+      <div className={`alerts-modal__summary alerts-modal__summary--${alert.severity}`}><SeverityTag severity={alert.severity} /><strong>{alert.unit} · {alert.zone}</strong><p>{alert.description}</p><time>{alert.timestamp} · {alert.age}</time></div>
+      <div className="alerts-modal__recommendation"><p>RECOMENDACIÓN DEL COPILOTO</p><strong>{alert.recommendation}</strong></div>
+      <div className="alerts-modal__actions"><button className="alerts-secondary-button" type="button" onClick={onViewUnit}>Ver unidad</button>{!alert.acknowledged && <button className="alerts-primary-button" type="button" onClick={onAcknowledge}>Reconocer alerta</button>}</div>
+    </section>
   );
 }
 
-function AlertRow({ alert, onOpen, onAcknowledge }: { alert: Alert; onOpen: () => void; onAcknowledge: () => void }) {
+function AlertRow({ alert, onOpen }: { alert: Alert; onOpen: () => void }) {
   return (
     <article className={`alert-row alert-row--${alert.severity}${alert.acknowledged ? " alert-row--acknowledged" : ""}`} onClick={onOpen}>
       <span><SeverityTag severity={alert.severity} /></span>
       <span className="alert-unit"><strong>{alert.unit}</strong><small>{alert.zone}</small></span>
       <span className="alert-description">{alert.description}</span>
       <time>{alert.timestamp}</time>
-      <span className="alert-state">{alert.acknowledged ? <>{icons.check}<span>Reconocida</span></> : <span>Pendiente</span>}</span>
-      <span className="alert-action">{alert.acknowledged ? icons.check : <button type="button" onClick={(event) => { event.stopPropagation(); onAcknowledge(); }}>Reconocer</button>}</span>
+      <span className={`alert-state alert-state-chip${alert.acknowledged ? " alert-state-chip--acknowledged" : " alert-state-chip--pending"}`}>{alert.acknowledged ? <>{icons.check}<span>Reconocida</span></> : <span>Pendiente</span>}</span>
+      <span className="alert-action"><button className="alert-detail-button" type="button" aria-label={`Ver detalle de alerta de ${alert.unit}`} onClick={(event) => { event.stopPropagation(); onOpen(); }}>{icons.detail}</button></span>
     </article>
   );
 }
 
-export default function Alerts() {
+export default function Alerts({ onClose }: { onClose?: () => void }) {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<AlertFilter>("Todas");
   const [unitFilter, setUnitFilter] = useState("Todas las unidades");
@@ -76,8 +80,8 @@ export default function Alerts() {
   const [acknowledgedIds, setAcknowledgedIds] = useState<number[]>([]);
 
   const visibleAlerts = alerts.filter((alert) => {
-    const severityMatch = filter === "Todas" || (filter === "Críticas" && alert.severity === "critical") || (filter === "Advertencias" && alert.severity === "caution");
-    return severityMatch && (unitFilter === "Todas las unidades" || alert.unit === unitFilter);
+    const statusMatch = filter === "Todas" || (filter === "Pendientes" && !alert.acknowledged) || (filter === "Reconocidas" && alert.acknowledged);
+    return statusMatch && (unitFilter === "Todas las unidades" || alert.unit === unitFilter);
   }).map((alert) => acknowledgedIds.includes(alert.id) ? { ...alert, acknowledged: true } : alert);
 
   const acknowledge = (alert: Alert) => {
@@ -86,21 +90,35 @@ export default function Alerts() {
   };
 
   return (
-    <section className="alerts-screen">
-      <header className="alerts-header">
-        <div><p className="eyebrow">MONITOREO GLOBAL</p><h1>Centro de Alertas</h1><p className="alerts-summary"><strong>2</strong> alertas críticas sin reconocer · <strong>5</strong> hoy</p></div>
-        <button className="alerts-mobile-filter" type="button" onClick={() => setFilterSheetOpen(true)}>{icons.filter}<span>Filtrar</span></button>
-      </header>
-      <div className="alerts-filters" role="tablist" aria-label="Filtros de alertas">
-        {(["Todas", "Críticas", "Advertencias"] as AlertFilter[]).map((item) => <button className={filter === item ? "is-selected" : ""} type="button" role="tab" aria-selected={filter === item} onClick={() => setFilter(item)} key={item}>{item}</button>)}
-        <select aria-label="Filtrar por unidad" value={unitFilter} onChange={(event) => setUnitFilter(event.target.value)}><option>Todas las unidades</option><option>Ukucha-01</option><option>Ukucha-02</option><option>Ukucha-03</option><option>Ukucha-04</option></select>
-      </div>
-      {visibleAlerts.length === 0 ? <EmptyAlerts /> : <div className="alerts-table" role="table" aria-label="Alertas de la flota">
+    <div className="alerts-panel-backdrop" role="presentation" onClick={() => onClose?.()}>
+      <section className="alerts-panel-modal" role="dialog" aria-modal="true" aria-labelledby="alerts-panel-title" onClick={(event) => event.stopPropagation()}>
+        <section className="alerts-screen">
+          {selectedAlert ? <AlertModal alert={selectedAlert} onBack={() => setSelectedAlert(null)} onClose={() => onClose?.()} onAcknowledge={() => acknowledge(selectedAlert)} onViewUnit={() => { setSelectedAlert(null); navigate(`/unit/${selectedAlert.unit.toLowerCase()}`); }} /> : <>
+          <header className="alerts-header">
+            <div><p className="eyebrow">MONITOREO GLOBAL</p><h1 id="alerts-panel-title">Alertas</h1><p className="alerts-summary"><strong>{alerts.filter((alert) => alert.severity === "critical" && !alert.acknowledged).length}</strong> alertas críticas sin reconocer · <strong>{alerts.length}</strong> en historial</p></div>
+            <div className="alerts-header__actions"><button className="alerts-mobile-filter" type="button" onClick={() => setFilterSheetOpen(true)}>{icons.filter}<span>Filtrar</span></button><button className="alerts-panel-close" type="button" onClick={() => onClose?.()} aria-label="Cerrar alertas">{icons.close}</button></div>
+          </header>
+          <div className="alerts-history-layout">
+            <aside className="alerts-history-nav">
+              <p className="eyebrow">HISTORIAL</p>
+              <h2>Notificaciones</h2>
+              <div className="alerts-filters" role="tablist" aria-label="Filtros de alertas">
+        {(["Todas", "Pendientes", "Reconocidas"] as AlertFilter[]).map((item) => <button className={filter === item ? "is-selected" : ""} type="button" role="tab" aria-selected={filter === item} onClick={() => setFilter(item)} key={item}>{item}</button>)}
+        <StyledSelect ariaLabel="Filtrar por unidad" value={unitFilter} onChange={setUnitFilter} options={["Todas las unidades", "Ukucha-01", "Ukucha-02", "Ukucha-03", "Ukucha-04"].map((option) => ({ label: option, value: option }))} />
+              </div>
+            </aside>
+            <div className="alerts-history-content">
+              <header className="alerts-history-content__header"><strong>Alertas de la flota</strong><span>Selecciona una notificación para ver su detalle.</span></header>
+          {visibleAlerts.length === 0 ? <EmptyAlerts /> : <div className="alerts-table" role="table" aria-label="Alertas de la flota">
         <div className="alerts-table__head" role="row"><span>SEVERIDAD</span><span>UNIDAD</span><span>DESCRIPCIÓN DEL EVENTO</span><span>TIMESTAMP</span><span>ESTADO</span><span>ACCIÓN</span></div>
-        <div className="alerts-table__body">{visibleAlerts.map((alert) => <AlertRow key={alert.id} alert={alert} onOpen={() => setSelectedAlert(alert)} onAcknowledge={() => acknowledge(alert)} />)}</div>
-      </div>}
-      {filterSheetOpen && <div className="alerts-filter-sheet-backdrop" role="presentation" onClick={() => setFilterSheetOpen(false)}><div className="alerts-filter-sheet" role="dialog" aria-label="Filtros de alertas" onClick={(event) => event.stopPropagation()}><span className="alerts-sheet-handle" /><header><h2>Filtrar alertas</h2><button type="button" onClick={() => setFilterSheetOpen(false)} aria-label="Cerrar filtros">{icons.close}</button></header><div className="alerts-sheet-options">{(["Todas", "Críticas", "Advertencias"] as AlertFilter[]).map((item) => <button className={filter === item ? "is-selected" : ""} type="button" onClick={() => { setFilter(item); setFilterSheetOpen(false); }} key={item}>{item}</button>)}<select aria-label="Filtrar unidades" value={unitFilter} onChange={(event) => { setUnitFilter(event.target.value); setFilterSheetOpen(false); }}><option>Todas las unidades</option><option>Ukucha-01</option><option>Ukucha-02</option><option>Ukucha-03</option><option>Ukucha-04</option></select></div></div></div>}
-      {selectedAlert && <AlertModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} onAcknowledge={() => acknowledge(selectedAlert)} onViewUnit={() => { setSelectedAlert(null); navigate(`/unit/${selectedAlert.unit.toLowerCase()}`); }} />}
-    </section>
+        <div className="alerts-table__body">{visibleAlerts.map((alert) => <AlertRow key={alert.id} alert={alert} onOpen={() => setSelectedAlert(alert)} />)}</div>
+          </div>}
+            </div>
+          </div>
+          {filterSheetOpen && <div className="alerts-filter-sheet-backdrop" role="presentation" onClick={() => setFilterSheetOpen(false)}><div className="alerts-filter-sheet" role="dialog" aria-label="Filtros de alertas" onClick={(event) => event.stopPropagation()}><span className="alerts-sheet-handle" /><header><h2>Filtrar alertas</h2><button type="button" onClick={() => setFilterSheetOpen(false)} aria-label="Cerrar filtros">{icons.close}</button></header><div className="alerts-sheet-options">{(["Todas", "Pendientes", "Reconocidas"] as AlertFilter[]).map((item) => <button className={filter === item ? "is-selected" : ""} type="button" onClick={() => { setFilter(item); setFilterSheetOpen(false); }} key={item}>{item}</button>)}<StyledSelect ariaLabel="Filtrar unidades" value={unitFilter} onChange={(value) => { setUnitFilter(value); setFilterSheetOpen(false); }} options={["Todas las unidades", "Ukucha-01", "Ukucha-02", "Ukucha-03", "Ukucha-04"].map((option) => ({ label: option, value: option }))} /></div></div></div>}
+          </>}
+        </section>
+      </section>
+    </div>
   );
 }
