@@ -4163,21 +4163,11 @@ body h1,
   position: absolute;
   top: 47%;
   left: 56%;
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  background: color-mix(in srgb, var(--safe) 18%, var(--surface));
-  border: 1px solid var(--safe);
-  border-radius: var(--shape-pill);
+  z-index: 1;
+  display: block;
+  width: 130px;
+  height: auto;
   transform: translate(-50%, -50%);
-}
-
-.location-map-preview__pin i {
-  width: 9px;
-  height: 9px;
-  background: var(--safe);
-  border-radius: var(--shape-pill);
 }
 
 .location-map-preview__zone {

@@ -1,3 +1,5 @@
+import mousePositionImage from "../../raton_posicion.png";
+
 export type TelemetrySnapshot = {
   audio: { left: number | null; right: number | null };
   environment: {
@@ -121,7 +123,7 @@ export function LocationMetricCard({
           <path className="map-road map-road--two" d="M36 -10 C72 38 116 54 112 138" />
           <path className="map-route-preview" d="M28 104 C62 91 69 57 101 62 S143 88 185 43" />
         </svg>
-        {valid && <span className="location-map-preview__pin"><i /></span>}
+        {valid && <img className="location-map-preview__pin" src={mousePositionImage} alt={`Ubicación de ${zone}`} />}
         <span className="location-map-preview__zone">{zone}</span>
       </div>
       <footer className="location-metric-card__coords">
