@@ -1,102 +1,156 @@
-"""Paquetes de subida (nodo -> PC) que llegan por el enlace serial full-duplex.
+"""Paquete de telemetria de subida (ESP32-S3 de campo -> PC) real.
 
-Union discriminada por packet_type: cualquier linea JSON invalida o de un
-tipo no reconocido falla la validacion de forma explicita (ValidationError),
-en vez de aceptarse silenciosamente con campos faltantes.
+Llega por UDP (puerto 5002 por defecto) como una linea de texto plano
+delimitada por pipes -- NO es JSON con packet_type discriminador como se
+asumio en el diseño original migrado desde test-yolo:
+
+    A:<vol_l>,<vol_r>|M:<mq1>,<mq2>|P:<pm25>|G:<lat>,<lon>|C:<temp>,<presion>,<humedad>
+
+Fuente de verdad: appflores/esp32s3_firmware.ino (TaskTelemetry, linea
+"Formato: A:%.1f,%.1f|M:0.0,0.0|P:0|G:%.6f,%.6f|C:%.2f,%.2f,%.2f") y
+appflores/server.js (mismo parseo del lado Node.js).
+
+Diferencias confirmadas contra el diseño original (ver .claude/skills/
+ukucha/backend-conexion.md, seccion "Gaps y decisiones conocidas"):
+- Topologia real: 1 solo ESP32-S3 de campo habla WiFi/UDP directo al PC
+  (no hay 3 nodos S3 + dongle ESP-NOW por serial).
+- No hay ToF, giroscopio, `led_state` reportado, ni 4 motores -- el
+  hardware solo expone 2 motores + 1 canal de luces, y son de solo
+  escritura (ver downlink.py), nunca se leen de vuelta.
+- GPS solo trae lat/lon (TinyGPS++ expone fix/sats pero el firmware
+  todavia no los serializa).
+- Gas (MQ7/MQ136) y polvo (PM2.5) estan declarados en el firmware pero
+  **sin sensor fisico conectado todavia**: llegan hardcodeados en 0.0/0
+  ("M:0.0,0.0|P:0"). Se modelan como Optional[float] a proposito -- el
+  dia que se conecten sensores reales, este modulo no necesita cambios,
+  solo dejaran de llegar en 0.
+- Clima (temperatura/presion/humedad, BMP280+AHT20) SI existe en el
+  firmware real y no estaba contemplado en el esquema original.
 """
 from __future__ import annotations
 
-from typing import Annotated, Literal, Optional, Union
+import logging
+from typing import Optional
 
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, ValidationError
 
-
-class FramePacket(BaseModel):
-    node_id: str
-    timestamp_ms: int
-    packet_type: Literal["frame"]
-    frame_id: int
-    seq: int
-    seq_total: int
-    payload_b64: str
+logger = logging.getLogger(__name__)
 
 
-class AudioSensorsData(BaseModel):
-    mic1_db: float
-    mic2_db: float
+class AudioLevels(BaseModel):
+    """Envolvente de volumen I2S en % (0-100), no dB -- ver TaskAudio en
+    esp32s3_firmware.ino (constrain(avg/12000*100, 0, 100))."""
+
+    vol_l: float
+    vol_r: float
 
 
-class AudioSensorsPacket(BaseModel):
-    node_id: str
-    timestamp_ms: int
-    packet_type: Literal["audio_sensors"]
-    data: AudioSensorsData
+class GasLevels(BaseModel):
+    """mq1 (CO, MQ7) / mq2 (H2S, MQ136). None mientras el firmware los
+    envie hardcodeados en 0.0 (sensores fisicos aun no conectados)."""
+
+    mq1: Optional[float] = None
+    mq2: Optional[float] = None
 
 
-class GpsData(BaseModel):
-    lat: float
-    lon: float
-    fix: bool
-    sats: int
+class GpsFix(BaseModel):
+    """Solo lat/lon por ahora -- fix/sats pendientes de agregar al firmware."""
+
+    lat: Optional[float] = None
+    lon: Optional[float] = None
 
 
-class DustData(BaseModel):
-    pm1_0: int
-    pm2_5: int
-    pm10: int
+class ClimateReading(BaseModel):
+    """AHT20 (temp/humedad) + BMP280 (presion, y respaldo de temp)."""
+
+    temp_c: Optional[float] = None
+    pressure_hpa: Optional[float] = None
+    humidity_pct: Optional[float] = None
 
 
-class GasReading(BaseModel):
-    raw_adc: int
-    ppm_est: Optional[float] = None  # null mientras no haya curva de calibracion Rs/Ro lista
+class TelemetryPacket(BaseModel):
+    """Un paquete de telemetria completo del ESP32-S3 de campo (~10Hz).
+
+    Sin node_id/timestamp_ms propios (el firmware no los incluye en la
+    linea); quien reciba el paquete (UdpTransport/SerialManager) le agrega
+    el momento de recepcion."""
+
+    audio: AudioLevels
+    gas: GasLevels
+    dust_ppm: Optional[float] = None  # sensor de polvo aun no conectado
+    gps: GpsFix
+    climate: ClimateReading
+
+    @classmethod
+    def from_line(cls, text: str) -> "TelemetryPacket":
+        """Parsea 'A:l,r|M:mq1,mq2|P:pm|G:lat,lon|C:t,p,h'.
+
+        Lanza ValueError si falta una seccion completa o el separador
+        interno de una seccion no tiene la cantidad esperada de valores --
+        nunca acepta silenciosamente una linea truncada."""
+        sections: dict[str, str] = {}
+        for part in text.split("|"):
+            if ":" not in part:
+                raise ValueError(f"Seccion sin prefijo valido: {part!r}")
+            key, _, value = part.partition(":")
+            sections[key] = value
+
+        missing = {"A", "M", "P", "G", "C"} - sections.keys()
+        if missing:
+            raise ValueError(f"Faltan secciones {sorted(missing)} en linea: {text!r}")
+
+        vol_l_raw, vol_r_raw = _split(sections["A"], 2, "A")
+        mq1_raw, mq2_raw = _split(sections["M"], 2, "M")
+        lat_raw, lon_raw = _split(sections["G"], 2, "G")
+        temp_raw, press_raw, hum_raw = _split(sections["C"], 3, "C")
+
+        vol_l = _parse_float(vol_l_raw)
+        vol_r = _parse_float(vol_r_raw)
+        if vol_l is None or vol_r is None:
+            raise ValueError(f"Seccion A (audio) con valores invalidos: {sections['A']!r}")
+
+        return cls(
+            audio=AudioLevels(vol_l=vol_l, vol_r=vol_r),
+            gas=GasLevels(mq1=_parse_float(mq1_raw), mq2=_parse_float(mq2_raw)),
+            dust_ppm=_parse_float(sections["P"]),
+            gps=GpsFix(lat=_parse_float(lat_raw), lon=_parse_float(lon_raw)),
+            climate=ClimateReading(
+                temp_c=_parse_float(temp_raw),
+                pressure_hpa=_parse_float(press_raw),
+                humidity_pct=_parse_float(hum_raw),
+            ),
+        )
 
 
-class MotorsState(BaseModel):
-    m1: int
-    m2: int
-    m3: int
-    m4: int
+def _split(raw: str, expected: int, section: str) -> list[str]:
+    parts = raw.split(",")
+    if len(parts) != expected:
+        raise ValueError(
+            f"Seccion {section} esperaba {expected} valores separados por coma, "
+            f"recibio {len(parts)}: {raw!r}"
+        )
+    return parts
 
 
-class EnvActuationData(BaseModel):
-    gps: GpsData
-    tof_distance_mm: int
-    dust_pms5003: DustData
-    gas_mq7_co: GasReading
-    gas_mq136_h2s: GasReading
-    led_state: str
-    motors: MotorsState
-    battery_v: float
-    gyro: Optional[dict] = None  # reservado para giroscopio futuro, hoy siempre null
+def _parse_float(raw: str) -> Optional[float]:
+    """El firmware puede enviar 'nan' (lectura invalida, ver
+    appflores/registro_telemetria.csv) -- se normaliza a None en vez de
+    fallar toda la linea por un solo campo fuera de rango."""
+    try:
+        value = float(raw)
+    except ValueError:
+        return None
+    if value != value:  # NaN != NaN
+        return None
+    return value
 
 
-class EnvActuationPacket(BaseModel):
-    node_id: str
-    timestamp_ms: int
-    packet_type: Literal["env_and_actuation"]
-    data: EnvActuationData
-
-
-class CmdAckPacket(BaseModel):
-    """Confirmacion de un comando de bajada, identificado por cmd_id.
-
-    Este packet_type NO esta confirmado en el firmware al momento de escribir
-    este modulo (ver decision de arquitectura en feature/conexion): se asume
-    que ESP32-S3 No3 lo emitira a futuro. El backend ya sabe parsearlo para
-    no requerir cambios cuando el firmware lo implemente; mientras tanto,
-    SerialManager solo loguea "enviado" + timeout sin bloquear nada.
-    """
-
-    node_id: str
-    timestamp_ms: int
-    packet_type: Literal["cmd_ack"]
-    cmd_id: int
-    status: Literal["ok", "error"] = "ok"
-
-
-UplinkPacket = Annotated[
-    Union[FramePacket, AudioSensorsPacket, EnvActuationPacket, CmdAckPacket],
-    Field(discriminator="packet_type"),
-]
-
-uplink_adapter: TypeAdapter = TypeAdapter(UplinkPacket)
+def parse_telemetry_line(text: str) -> Optional[TelemetryPacket]:
+    """Punto de entrada usado por SerialManager (via cualquier Transport,
+    serial o UDP). None (con warning logueado) si la linea no se pudo
+    parsear, en vez de propagar la excepcion al hilo lector."""
+    try:
+        return TelemetryPacket.from_line(text)
+    except (ValueError, ValidationError) as e:
+        logger.warning("Linea de telemetria invalida, descartada: %s (%s)", text[:200], e)
+        return None
