@@ -79,8 +79,9 @@ class MockTransport:
         temp = round(self._rng.uniform(18, 28), 2)
         press = round(self._rng.uniform(1008, 1015), 2)
         hum = round(self._rng.uniform(30, 60), 2)
-        # Mismo formato que el firmware real: MQ y polvo hardcodeados en
-        # 0.0/0 hasta que se conecten esos sensores fisicos.
+        # Mismo formato que el firmware real: M:mq7,mq136 (gas, ADC crudo),
+        # P:pir (HC-SR501, 0/1) -- se simulan en 0 por simplicidad, el mock
+        # no necesita variar estos valores para probar el resto del pipeline.
         line = f"A:{vol_l},{vol_r}|M:0.0,0.0|P:0|G:{lat:.6f},{lon:.6f}|C:{temp},{press},{hum}\n"
         self._queue.put(line.encode("utf-8"))
 

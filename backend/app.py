@@ -86,6 +86,10 @@ ENV_EVERY = int(os.environ.get("UKUCHA_ENV_EVERY", "5"))
 # derivarse de la IP de origen (ver UdpTransport._node_ip).
 FIELD_NODE_ID = "esp32s3_campo"
 
+# Telemetria real llega a 10Hz -- loguear 1 de cada N paquetes para poder
+# seguirla a ojo por terminal (ver plan de visualizacion sin frontend).
+_TELEMETRY_LOG_EVERY = 10
+
 
 def _build_persistence_backend() -> PersistenceBackend:
     url = os.environ.get("SUPABASE_URL")
@@ -180,7 +184,22 @@ def create_app() -> FastAPI:
         on_log=persistence_worker.save_command_log,
     )
 
+    packet_count = 0
+
     def _on_packet(packet: TelemetryPacket) -> None:
+        nonlocal packet_count
+        packet_count += 1
+        # Telemetria llega a 10Hz -- se loguea 1 de cada N para poder seguirla
+        # a ojo por terminal (sin frontend) sin saturar la consola.
+        if packet_count % _TELEMETRY_LOG_EVERY == 0:
+            logger.info(
+                "Telemetria: audio=(%s,%s) gas=(mq7=%s,mq136=%s) pir=%s "
+                "gps=(%s,%s) clima=(%sC,%shPa,%s%%)",
+                packet.audio.vol_l, packet.audio.vol_r,
+                packet.gas.mq1, packet.gas.mq2, packet.pir_detected,
+                packet.gps.lat, packet.gps.lon,
+                packet.climate.temp_c, packet.climate.pressure_hpa, packet.climate.humidity_pct,
+            )
         telemetry_store.update(packet)
         persistence_worker.save_telemetry({
             "kind": "telemetry",

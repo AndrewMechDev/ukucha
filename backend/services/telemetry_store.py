@@ -42,11 +42,11 @@ class TelemetryStore:
     def get_env(self) -> dict:
         packet, stale = self._snapshot()
         if packet is None:
-            return {"gps": None, "gas": None, "dust_ppm": None, "climate": None, "stale": True}
+            return {"gps": None, "gas": None, "pir_detected": None, "climate": None, "stale": True}
         return {
             "gps": packet.gps,
             "gas": packet.gas,
-            "dust_ppm": packet.dust_ppm,
+            "pir_detected": packet.pir_detected,
             "climate": packet.climate,
             "stale": stale,
         }

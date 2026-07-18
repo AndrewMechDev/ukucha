@@ -4,11 +4,10 @@ Llega por UDP (puerto 5002 por defecto) como una linea de texto plano
 delimitada por pipes -- NO es JSON con packet_type discriminador como se
 asumio en el diseño original migrado desde test-yolo:
 
-    A:<vol_l>,<vol_r>|M:<mq1>,<mq2>|P:<pm25>|G:<lat>,<lon>|C:<temp>,<presion>,<humedad>
+    A:<vol_l>,<vol_r>|M:<mq7>,<mq136>|P:<pir>|G:<lat>,<lon>|C:<temp>,<presion>,<humedad>
 
 Fuente de verdad: appflores/esp32s3_firmware.ino (TaskTelemetry, linea
-"Formato: A:%.1f,%.1f|M:0.0,0.0|P:0|G:%.6f,%.6f|C:%.2f,%.2f,%.2f") y
-appflores/server.js (mismo parseo del lado Node.js).
+"Formato: A:%.1f,%.1f|M:%d,%d|P:%d|G:%.6f,%.6f|C:%.2f,%.2f,%.2f").
 
 Diferencias confirmadas contra el diseño original (ver .claude/skills/
 ukucha/backend-conexion.md, seccion "Gaps y decisiones conocidas"):
@@ -19,11 +18,14 @@ ukucha/backend-conexion.md, seccion "Gaps y decisiones conocidas"):
   escritura (ver downlink.py), nunca se leen de vuelta.
 - GPS solo trae lat/lon (TinyGPS++ expone fix/sats pero el firmware
   todavia no los serializa).
-- Gas (MQ7/MQ136) y polvo (PM2.5) estan declarados en el firmware pero
-  **sin sensor fisico conectado todavia**: llegan hardcodeados en 0.0/0
-  ("M:0.0,0.0|P:0"). Se modelan como Optional[float] a proposito -- el
-  dia que se conecten sensores reales, este modulo no necesita cambios,
-  solo dejaran de llegar en 0.
+- Gas (MQ7/MQ136, seccion `M:`): sensores fisicos ya conectados, valores
+  ADC crudos (`analogRead`, 0-4095) reales, no un placeholder.
+- Presencia (seccion `P:`): el firmware **ya NO manda PM2.5/polvo** --
+  ese sensor se saco del diseño. `P:` ahora es el HC-SR501 (PIR), lectura
+  digital `0`/`1` de `digitalRead`. Si un consumidor viejo de este modulo
+  todavia espera `dust_ppm`, esta desactualizado: el campo se renombro a
+  `pir_detected` (bool) porque es una cantidad fisica distinta, no la
+  misma con otro nombre.
 - Clima (temperatura/presion/humedad, BMP280+AHT20) SI existe en el
   firmware real y no estaba contemplado en el esquema original.
 """
@@ -46,8 +48,8 @@ class AudioLevels(BaseModel):
 
 
 class GasLevels(BaseModel):
-    """mq1 (CO, MQ7) / mq2 (H2S, MQ136). None mientras el firmware los
-    envie hardcodeados en 0.0 (sensores fisicos aun no conectados)."""
+    """mq1 (CO, MQ7) / mq2 (H2S, MQ136): lectura ADC cruda (analogRead,
+    0-4095), sin calibrar a ppm -- el firmware no hace esa conversion."""
 
     mq1: Optional[float] = None
     mq2: Optional[float] = None
@@ -77,13 +79,13 @@ class TelemetryPacket(BaseModel):
 
     audio: AudioLevels
     gas: GasLevels
-    dust_ppm: Optional[float] = None  # sensor de polvo aun no conectado
+    pir_detected: Optional[bool] = None  # HC-SR501, digitalRead 0/1 (seccion P:)
     gps: GpsFix
     climate: ClimateReading
 
     @classmethod
     def from_line(cls, text: str) -> "TelemetryPacket":
-        """Parsea 'A:l,r|M:mq1,mq2|P:pm|G:lat,lon|C:t,p,h'.
+        """Parsea 'A:l,r|M:mq7,mq136|P:pir|G:lat,lon|C:t,p,h'.
 
         Lanza ValueError si falta una seccion completa o el separador
         interno de una seccion no tiene la cantidad esperada de valores --
@@ -112,7 +114,7 @@ class TelemetryPacket(BaseModel):
         return cls(
             audio=AudioLevels(vol_l=vol_l, vol_r=vol_r),
             gas=GasLevels(mq1=_parse_float(mq1_raw), mq2=_parse_float(mq2_raw)),
-            dust_ppm=_parse_float(sections["P"]),
+            pir_detected=_parse_bool_flag(sections["P"]),
             gps=GpsFix(lat=_parse_float(lat_raw), lon=_parse_float(lon_raw)),
             climate=ClimateReading(
                 temp_c=_parse_float(temp_raw),
@@ -130,6 +132,15 @@ def _split(raw: str, expected: int, section: str) -> list[str]:
             f"recibio {len(parts)}: {raw!r}"
         )
     return parts
+
+
+def _parse_bool_flag(raw: str) -> Optional[bool]:
+    """El HC-SR501 manda digitalRead crudo ('0'/'1'). None si la seccion
+    llega vacia o con un valor no numerico, en vez de asumir 'sin deteccion'."""
+    value = _parse_float(raw)
+    if value is None:
+        return None
+    return value != 0.0
 
 
 def _parse_float(raw: str) -> Optional[float]:

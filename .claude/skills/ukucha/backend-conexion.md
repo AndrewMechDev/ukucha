@@ -20,19 +20,22 @@ Divergencias confirmadas:
 |---|---|---|
 | Topologia | ESP32-CAM + 3x ESP32-S3 + dongle No3 (ESP-NOW -> serial USB) | ESP32-CAM (video) + 1x ESP32-S3 de campo (sensores), ambos WiFi directo |
 | Transporte de sensores | `SerialTransport` (pyserial, `COM3`) | `UdpTransport`: UDP entrante `:5002` (telemetria), UDP saliente `:4210` (comandos) — IP del nodo autodetectada del primer paquete |
-| Formato de paquete | JSON con `packet_type` discriminador | Texto plano pipe-delimited: `A:volL,volR\|M:mq1,mq2\|P:pm25\|G:lat,lon\|C:temp,presion,humedad` (`TelemetryPacket.from_line`) |
+| Formato de paquete | JSON con `packet_type` discriminador | Texto plano pipe-delimited: `A:volL,volR\|M:mq7,mq136\|P:pir\|G:lat,lon\|C:temp,presion,humedad` (`TelemetryPacket.from_line`) |
 | Video | `FramePacket` fragmentado + `FrameReassembler` sobre el mismo enlace | Stream HTTP MJPEG propio del ESP32-CAM (`multipart/x-mixed-replace`, puerto 80) leido por `MjpegClient` — `FrameReassembler` se elimino del repo |
 | Comandos | JSON `{target_node, cmd_id, command, params}` con ack (`CmdAckPacket`) | Texto plano `C:<luces>,<motorA>,<motorB>` sin ack (`ControlCommand.to_wire()`); un solo comando `set_actuators` |
 | GPS | `{lat, lon, fix, sats}` | Solo `{lat, lon}` (`GpsFix`) — fix/sats pendientes en el firmware |
-| Gas (MQ7/MQ136) | `{raw_adc, ppm_est}` | Valores planos `mq1, mq2` (`GasLevels`), **hardcodeados en 0.0 hasta que el compañero de hardware conecte los sensores fisicos** |
-| Polvo | `{pm1_0, pm2_5, pm10}` (PMS5003) | Un solo `dust_ppm` (`P:pm25`), **hardcodeado en 0 hasta que se conecte el sensor fisico** |
+| Gas (MQ7/MQ136) | `{raw_adc, ppm_est}` | Valores planos `mq1, mq2` (`GasLevels`), **sensores fisicos ya conectados**, ADC crudo (0-4095) sin calibrar a ppm |
+| Polvo (PMS5003) | `{pm1_0, pm2_5, pm10}` | **Se dio de baja del diseño** -- no hay sensor de polvo en el hardware real. El slot `P:` del wire format se reuso para el HC-SR501 (PIR) |
+| Presencia (PIR) | No existia en el esquema | `pir_detected: Optional[bool]` (`P:` = `digitalRead` del HC-SR501, 0/1) -- **no confundir con el polvo que ocupaba antes ese mismo slot del wire format** |
 | Clima | No existia en el esquema | `ClimateReading` (temp/presion/humedad, BMP280+AHT20) — SI existe en el firmware real |
 | ToF, gyro, `led_state`, 4 motores | Declarados en el esquema | No existen en el firmware; hay 1 tira NeoPixel (vumetro, no controlable por comando) + 2 motores + `luces`, ambos de solo escritura |
 
-Pendiente (según lo confirmado con el equipo): los sensores MQ (gas) y de
-polvo, y la mejora de precision del GPS, se implementaran en el firmware
-mas adelante — mientras tanto `GasLevels`/`dust_ppm` llegan en `None`/0 y
-el resto del pipeline (deteccion, WS, persistencia) funciona igual.
+Actualizacion de hardware (segunda ronda): se sumaron sensores fisicos MQ7
+(CO), MQ136 (H2S) y HC-SR501 (PIR de presencia). El polvo/PM2.5 se dio de
+baja del diseño -- no hay sensor fisico para eso. Pendiente: la mejora de
+precision del GPS (fix/sats), que se implementara en el firmware mas
+adelante — mientras tanto llega solo `{lat, lon}` y el resto del pipeline
+(deteccion, WS, persistencia) funciona igual.
 
 ### Confirmacion definitiva: no hay ni va a haber USB
 
@@ -71,6 +74,14 @@ practicas:
 - La PC/laptop que corre el backend tambien tiene que estar conectada a
   ese mismo hotspot (misma subred), no a la red WiFi habitual — sino
   `UdpTransport` nunca va a recibir los paquetes UDP de telemetria.
+- El firmware del ESP32-S3 (`hostIp` en `esp32s3_firmware.ino`, no
+  trackeado en git) tiene **hardcodeada la IP de la laptop** a la que le
+  manda los paquetes UDP -- es la misma caveat que `UKUCHA_CAM_URL` pero
+  al reves: si el hotspot le reasigna a la laptop una IP distinta en una
+  sesion futura (reinicio de telefono, etc.), hay que re-flashear (o
+  agregar autodescubrimiento, que hoy no existe del lado del firmware)
+  con la IP nueva, sino el ESP32-S3 va a seguir mandando paquetes a una
+  IP que ya no es la laptop y `UdpTransport` no va a recibir nada.
 
 ## Objetivo (diseño original, ver seccion de arriba para el estado real)
 

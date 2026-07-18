@@ -58,8 +58,8 @@ class AudioState(BaseModel):
 
 class EnvState(BaseModel):
     gps: Optional[GpsFix] = None
-    gas: Optional[GasLevels] = None  # mq1/mq2 en None hasta que se conecten los sensores fisicos
-    dust_ppm: Optional[float] = None  # None hasta que se conecte el sensor de polvo
+    gas: Optional[GasLevels] = None  # mq1 (MQ7) / mq2 (MQ136), ADC crudo
+    pir_detected: Optional[bool] = None  # HC-SR501, ver schemas/uplink.py
     climate: Optional[ClimateReading] = None
     stale: bool
 
