@@ -25,6 +25,11 @@ logger = logging.getLogger(__name__)
 FrameCallback = Callable[[int, bytes, int], None]
 
 _CONNECT_TIMEOUT_S = 5.0
+# El read timeout es mas generoso que el connect timeout: el stream MJPEG
+# tiene huecos naturales entre frame y frame (captura + conversion JPEG
+# por software en el ESP32-CAM, mas jitter de WiFi 2.4GHz) que pueden
+# superar unos pocos segundos sin que el enlace este realmente caido.
+_READ_TIMEOUT_S = 20.0
 _CHUNK_SIZE = 4096
 _MAX_BUFFER_WITHOUT_SOI = 1_000_000  # evita crecer sin limite si nunca aparece un SOI
 _RECONNECT_BACKOFF_INITIAL_S = 1.0
@@ -73,7 +78,9 @@ class MjpegClient:
                 backoff = min(backoff * 2, _RECONNECT_BACKOFF_MAX_S)
 
     def _stream_once(self) -> None:
-        with requests.get(self._url, stream=True, timeout=_CONNECT_TIMEOUT_S) as resp:
+        with requests.get(
+            self._url, stream=True, timeout=(_CONNECT_TIMEOUT_S, _READ_TIMEOUT_S)
+        ) as resp:
             resp.raise_for_status()
             buffer = b""
             for chunk in resp.iter_content(chunk_size=_CHUNK_SIZE):
