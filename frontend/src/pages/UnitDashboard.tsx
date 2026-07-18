@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 type UnitInfo = { name: string; zone: string };
@@ -28,9 +28,34 @@ export default function UnitDashboard() {
   const navigate = useNavigate();
   const { unitId = "ukucha-03" } = useParams();
   const unit = unitInfo[unitId.toLowerCase()] ?? { name: unitId, zone: "Zona desconocida" };
+  const cameraRef = useRef<HTMLVideoElement>(null);
   const [mapView, setMapView] = useState(false);
   const [flyout, setFlyout] = useState<Flyout>(null);
   const [detectionOpen, setDetectionOpen] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState<"requesting" | "live" | "offline">("requesting");
+
+  useEffect(() => {
+    let stream: MediaStream | undefined;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraStatus("offline");
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then((cameraStream) => {
+        stream = cameraStream;
+        setCameraStatus("live");
+        if (cameraRef.current) {
+          cameraRef.current.srcObject = cameraStream;
+        }
+      })
+      .catch(() => setCameraStatus("offline"));
+
+    return () => {
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   const openTool = (tool: Exclude<Flyout, null>) => {
     if (window.matchMedia("(max-width: 599px)").matches) {
@@ -44,7 +69,7 @@ export default function UnitDashboard() {
     <section className="mission-screen">
       <div className="mission-stage">
         <div className={`mission-canvas${mapView ? " mission-canvas--map" : ""}`}>
-          {mapView ? <div className="mission-map" aria-label={`Mapa táctico de ${unit.zone}`}><span className="mission-map__route" /><span className="mission-map__unit">U03</span><span className="mission-map__point mission-map__point--one" /><span className="mission-map__point mission-map__point--two" /></div> : <><div className="mission-video-texture" aria-hidden="true" /><span className="mission-video-label">LIVE · CAM 03</span><button className="yolo-detection" type="button" onClick={() => setDetectionOpen(true)} aria-label="Abrir detalle de detección de persona"><span className="yolo-detection__corner yolo-detection__corner--tl" /><span className="yolo-detection__corner yolo-detection__corner--tr" /><span className="yolo-detection__corner yolo-detection__corner--bl" /><span className="yolo-detection__corner yolo-detection__corner--br" /><span className="yolo-detection__label">PERSONA 92%</span></button></>}
+          {mapView ? <div className="mission-map" aria-label={`Mapa táctico de ${unit.zone}`}><span className="mission-map__route" /><span className="mission-map__unit">U03</span><span className="mission-map__point mission-map__point--one" /><span className="mission-map__point mission-map__point--two" /></div> : <><video ref={cameraRef} className={`unit-camera-feed${cameraStatus === "live" ? " is-live" : ""}`} autoPlay playsInline muted aria-label={`Webcam del Dashboard de ${unit.name}`} /><div className="mission-video-texture" aria-hidden="true" /><span className="mission-video-label">{cameraStatus === "live" ? "LIVE · WEBCAM" : "SIN SEÑAL · WEBCAM"}</span>{cameraStatus === "offline" && <span className="unit-camera-message">Permite el acceso a la cámara para ver el feed en vivo.</span>}<button className="yolo-detection" type="button" onClick={() => setDetectionOpen(true)} aria-label="Abrir detalle de detección de persona"><span className="yolo-detection__corner yolo-detection__corner--tl" /><span className="yolo-detection__corner yolo-detection__corner--tr" /><span className="yolo-detection__corner yolo-detection__corner--bl" /><span className="yolo-detection__corner yolo-detection__corner--br" /><span className="yolo-detection__label">PERSONA 92%</span></button></>}
         </div>
         <div className="unit-dashboard-nav-wrap">
           <nav className="unit-dashboard-nav" aria-label="Controles de unidad">

@@ -1010,12 +1010,42 @@ body {
 
 .mission-video-texture {
   position: absolute;
+  z-index: 1;
   inset: 0;
+  pointer-events: none;
   opacity: 0.5;
   background:
     linear-gradient(115deg, transparent 0 27%, color-mix(in srgb, var(--on-surface-variant) 20%, transparent) 27.2% 27.8%, transparent 28% 100%),
     linear-gradient(165deg, transparent 0 59%, color-mix(in srgb, var(--safe) 12%, transparent) 59.3% 60%, transparent 60.3% 100%),
     repeating-linear-gradient(0deg, color-mix(in srgb, var(--on-surface) 4%, transparent) 0 1px, transparent 1px 5px);
+}
+
+.unit-camera-feed {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-base);
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity var(--motion-firm);
+}
+
+.unit-camera-feed.is-live {
+  opacity: 1;
+}
+
+.unit-camera-message {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  right: 232px;
+  left: 24px;
+  color: var(--on-surface-variant);
+  font-size: 14px !important;
+  text-align: center;
+  transform: translateY(-50%);
 }
 
 .mission-video-texture::after {
