@@ -241,15 +241,24 @@ def create_app() -> FastAPI:
             logger.info("Backend UKUCHA detenido")
 
     app = FastAPI(title="UKUCHA Backend v2", version="0.2.0", lifespan=lifespan)
+    cors_origins = [
+        origin.strip()
+        for origin in os.environ.get("CORS_ORIGINS", "*").split(",")
+        if origin.strip()
+    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
     app.state.stream_clients = set()
     app.state.output_queue = asyncio.Queue(maxsize=4)
     app.state.command_service = command_service
+
+    @app.get("/health")
+    async def health() -> dict:
+        return {"status": "ok"}
 
     app.include_router(stream_router)
     app.include_router(commands_router)
