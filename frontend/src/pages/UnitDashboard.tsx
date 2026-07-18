@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   AudioMetricCard,
@@ -9,14 +9,11 @@ import {
   type TelemetrySnapshot,
 } from "../components/TelemetryCards";
 import { useLanguage } from "../components/LanguageContext";
+import { useUnitStream } from "../hooks/useUnitStream";
+import { apiPost } from "../services/api";
 
 type UnitInfo = { name: string; zone: string };
 type Flyout = "timeline" | "copilot" | null;
-const placeholderTelemetry: TelemetrySnapshot = {
-  audio: { left: 6.5, right: 5.6 },
-  environment: { temperatureC: 28.4, pressureHpa: 783.1, humidityPercent: 34.2 },
-  gps: { latitude: -16.3988, longitude: -71.5369, valid: true },
-};
 
 const unitInfo: Record<string, UnitInfo> = {
   "ukucha-01": { name: "Ukucha-01", zone: "Zona Norte" },
@@ -66,8 +63,7 @@ export default function UnitDashboard() {
   const [flyout, setFlyout] = useState<Flyout>(null);
   const [detectionOpen, setDetectionOpen] = useState(false);
   const [sensorsCollapsed, setSensorsCollapsed] = useState(false);
-  const cameraRef = useRef<HTMLVideoElement>(null);
-  const [cameraStatus, setCameraStatus] = useState<"requesting" | "live" | "offline">("requesting");
+  const { data: frame, status: streamStatus } = useUnitStream();
   const [pressedKeys, setPressedKeys] = useState({
     w: false,
     a: false,
@@ -108,26 +104,32 @@ export default function UnitDashboard() {
     setPressedKeys((prev) => ({ ...prev, [key]: false }));
   };
 
+  // Traduce el HUD WASD al unico comando que soporta el firmware real
+  // (set_actuators: luces + 2 motores, ver backend/services/command_service.py).
   useEffect(() => {
-    let stream: MediaStream | undefined;
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraStatus("offline");
-      return;
+    const { w, a, s, d } = pressedKeys;
+    let motorA = 0;
+    let motorB = 0;
+    if (w) {
+      motorA = 80;
+      motorB = 80;
+    } else if (s) {
+      motorA = -80;
+      motorB = -80;
+    } else if (a) {
+      motorA = -60;
+      motorB = 60;
+    } else if (d) {
+      motorA = 60;
+      motorB = -60;
     }
-
-    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-      .then((cameraStream) => {
-        stream = cameraStream;
-        setCameraStatus("live");
-        if (cameraRef.current) cameraRef.current.srcObject = cameraStream;
-      })
-      .catch(() => setCameraStatus("offline"));
-
-    return () => {
-      stream?.getTracks().forEach((track) => track.stop());
-    };
-  }, []);
+    apiPost("/commands", {
+      command: "set_actuators",
+      params: { luces: 0, motor_a: motorA, motor_b: motorB },
+    }).catch(() => {
+      // sin conexion con el robot: el comando se descarta, no bloquea el HUD
+    });
+  }, [pressedKeys]);
 
   const openTool = (tool: Exclude<Flyout, null>) => {
     if (window.matchMedia("(max-width: 599px)").matches) {
@@ -137,20 +139,51 @@ export default function UnitDashboard() {
     setFlyout(flyout === tool ? null : tool);
   };
 
+  const telemetry: TelemetrySnapshot = {
+    audio: { left: frame?.audio.vol_l ?? null, right: frame?.audio.vol_r ?? null },
+    environment: {
+      temperatureC: frame?.env.climate?.temp_c ?? null,
+      humidityPercent: frame?.env.climate?.humidity_pct ?? null,
+      pressureHpa: frame?.env.climate?.pressure_hpa ?? null,
+    },
+    gps: {
+      latitude: frame?.env.gps?.lat ?? null,
+      longitude: frame?.env.gps?.lon ?? null,
+      valid: Boolean(frame?.env.gps?.lat && frame?.env.gps?.lon),
+    },
+  };
+  const connectionStatus =
+    streamStatus === "offline" ? "offline" : streamStatus === "connecting" ? "stale" : frame?.env.stale ? "stale" : "online";
+
   return (
     <section className="mission-screen">
       <div className={`mission-stage${sensorsCollapsed ? " sensors-collapsed" : ""}`}>
         <div className="mission-canvas">
-          <video ref={cameraRef} className={`unit-camera-feed${cameraStatus === "live" ? " is-live" : ""}`} autoPlay playsInline muted aria-label={`Webcam del Dashboard de ${unit.name}`} />
+          {frame ? (
+            <img
+              src={frame.image_b64}
+              className="unit-camera-feed is-live"
+              alt={`Stream en vivo del ESP32-CAM de ${unit.name}`}
+            />
+          ) : (
+            <span className="unit-camera-message">
+              {streamStatus === "connecting"
+                ? (language === "English" ? "Connecting to unit..." : "Conectando con la unidad...")
+                : (language === "English" ? "No live feed from unit" : "Sin feed en vivo de la unidad")}
+            </span>
+          )}
           <div className="mission-video-texture" aria-hidden="true" />
-          {cameraStatus === "offline" && <span className="unit-camera-message">{t("permite_camara")}</span>}
-          <button className="yolo-detection" type="button" onClick={() => setDetectionOpen(true)} aria-label={t("detalle_deteccion")}>
-            <span className="yolo-detection__corner yolo-detection__corner--tl" />
-            <span className="yolo-detection__corner yolo-detection__corner--tr" />
-            <span className="yolo-detection__corner yolo-detection__corner--bl" />
-            <span className="yolo-detection__corner yolo-detection__corner--br" />
-            <span className="yolo-detection__label">{language === "English" ? "PERSON 92%" : "PERSONA 92%"}</span>
-          </button>
+          {frame && frame.fall.n_personas > 0 && (
+            <button className="yolo-detection" type="button" onClick={() => setDetectionOpen(true)} aria-label={t("detalle_deteccion")}>
+              <span className="yolo-detection__corner yolo-detection__corner--tl" />
+              <span className="yolo-detection__corner yolo-detection__corner--tr" />
+              <span className="yolo-detection__corner yolo-detection__corner--bl" />
+              <span className="yolo-detection__corner yolo-detection__corner--br" />
+              <span className="yolo-detection__label">
+                {language === "English" ? `PERSON x${frame.fall.n_personas}` : `PERSONA x${frame.fall.n_personas}`}
+              </span>
+            </button>
+          )}
 
           <div className="movement-controls">
             <div className="movement-hud" aria-label="HUD de movimiento WASD">
@@ -204,8 +237,8 @@ export default function UnitDashboard() {
               </div>
             </div>
             <div className="movement-coordinates">
-              <strong>{placeholderTelemetry.gps.latitude?.toFixed(5) ?? "N/D"}</strong>
-              <strong>{placeholderTelemetry.gps.longitude?.toFixed(5) ?? "N/D"}</strong>
+              <strong>{telemetry.gps.latitude?.toFixed(5) ?? "N/D"}</strong>
+              <strong>{telemetry.gps.longitude?.toFixed(5) ?? "N/D"}</strong>
             </div>
           </div>
         </div>
@@ -215,7 +248,7 @@ export default function UnitDashboard() {
             <div className="unit-dashboard-identity">
               <strong>{unit.name}</strong>
               <span>{t(unit.zone) || unit.zone}</span>
-              <b><i /> {t("datos_placeholder")}</b>
+              {!frame && <b><i /> {t("datos_placeholder")}</b>}
             </div>
             <div className="unit-dashboard-actions">
               <button className={flyout === "timeline" ? "is-active" : ""} type="button" onClick={() => openTool("timeline")}>
@@ -239,11 +272,11 @@ export default function UnitDashboard() {
             </div>
             {!sensorsCollapsed && <button className="sensor-deck-toggle sensor-deck-toggle--inline" type="button" onClick={() => setSensorsCollapsed(true)} aria-label={language === "English" ? "Hide sensors" : "Ocultar sensores"}><span className="material-symbols-rounded">chevron_right</span></button>}
           </header>
-          <ConnectionMetricCard updated={t("actualizado_ahora")} status="demo" />
-          <AudioMetricCard left={placeholderTelemetry.audio.left} right={placeholderTelemetry.audio.right} />
-          <EnvironmentMetricCard temperature={placeholderTelemetry.environment.temperatureC} humidity={placeholderTelemetry.environment.humidityPercent} />
-          <PressureMetricCard pressure={placeholderTelemetry.environment.pressureHpa} />
-          <LocationMetricCard latitude={placeholderTelemetry.gps.latitude} longitude={placeholderTelemetry.gps.longitude} valid={placeholderTelemetry.gps.valid} zone={t(unit.zone) || unit.zone} />
+          <ConnectionMetricCard updated={t("actualizado_ahora")} status={connectionStatus} />
+          <AudioMetricCard left={telemetry.audio.left} right={telemetry.audio.right} />
+          <EnvironmentMetricCard temperature={telemetry.environment.temperatureC} humidity={telemetry.environment.humidityPercent} />
+          <PressureMetricCard pressure={telemetry.environment.pressureHpa} />
+          <LocationMetricCard latitude={telemetry.gps.latitude} longitude={telemetry.gps.longitude} valid={telemetry.gps.valid} zone={t(unit.zone) || unit.zone} />
         </aside>
         {sensorsCollapsed && <button className="sensor-deck-toggle sensor-deck-toggle--floating" type="button" onClick={() => setSensorsCollapsed(false)} aria-label={language === "English" ? "Show sensors" : "Mostrar sensores"}><span className="material-symbols-rounded">chevron_left</span></button>}
       </div>
