@@ -60,6 +60,17 @@ from backend.services.telemetry_store import TelemetryStore
 
 load_dotenv()  # no-op si no existe .env
 
+# Configurado a nivel de modulo (no solo en el bloque __main__) porque
+# `uvicorn backend.app:app` importa este archivo sin pasar por __main__:
+# sin esto, los logs INFO de todo el backend (arranque de workers,
+# conexiones de panel, etc.) se pierden en silencio y solo se ven los
+# WARNING/ERROR sueltos que Python emite via su handler de ultimo recurso,
+# sin timestamp ni nombre de logger.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
 logger = logging.getLogger(__name__)
 
 USE_MOCK = os.environ.get("UKUCHA_USE_MOCK", "1") != "0"
@@ -232,11 +243,6 @@ if __name__ == "__main__":
     import time as _time
 
     from starlette.testclient import TestClient
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    )
 
     with TestClient(app) as client:
         with client.websocket_connect("/ws/stream") as stream_ws, \
