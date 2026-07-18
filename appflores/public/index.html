@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consola de Misión Crítica - Cyberpunk Monochromatic</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #000000;
+            color: #00FFCC;
+            font-family: 'Share Tech Mono', monospace;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1000px;
+            border: 1px solid #00FFCC;
+            background: #050a10;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+        }
+
+        h1 {
+            color: #00FFCC;
+            font-size: 20px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px rgba(0, 255, 204, 0.4);
+        }
+
+        .status-tag {
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; text-shadow: none; }
+            50% { opacity: 1; text-shadow: 0 0 8px #00FFCC; }
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #00FFCC;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00FFCC;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .card {
+            background: #020508;
+            border: 1px solid #00FFCC;
+            padding: 20px;
+            width: 320px;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.1);
+            position: relative;
+        }
+
+        /* Esquinas cyberpunk */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 8px; height: 8px;
+            border-top: 2px solid #00FFCC;
+            border-left: 2px solid #00FFCC;
+        }
+
+        .card::after {
+            content: '';
+            position: absolute;
+            bottom: 0; right: 0; width: 8px; height: 8px;
+            border-bottom: 2px solid #00FFCC;
+            border-right: 2px solid #00FFCC;
+        }
+
+        h3 {
+            color: #00FFCC;
+            font-size: 14px;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(0, 255, 204, 0.3);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        /* Módulo Óptico */
+        .video-card {
+            width: 360px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #vid {
+            background: #000;
+            border: 1px solid #00FFCC;
+            width: 320px;
+            height: 240px;
+            display: block;
+        }
+
+        /* Módulo Acústico */
+        .vu-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 160px;
+            margin-top: 15px;
+        }
+
+        .vu-track-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .vu-track {
+            width: 28px;
+            height: 120px;
+            background: #000;
+            border: 1px solid rgba(0, 255, 204, 0.4);
+            position: relative;
+        }
+
+        .vu-fill {
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            height: 0%;
+            background: #00FFCC;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.7);
+            transition: height 0.15s ease-out;
+        }
+
+        .vu-label {
+            font-size: 11px;
+            color: #888;
+            letter-spacing: 1px;
+        }
+
+        /* Módulo Telemetría */
+        .data-line {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed rgba(0, 255, 204, 0.2);
+            padding: 8px 0;
+            font-size: 13px;
+        }
+
+        .data-line span:first-child {
+            color: #888;
+        }
+
+        .data-line span:last-child {
+            color: #00FFCC;
+            font-weight: bold;
+        }
+
+        /* Módulo de Control */
+        .control-group {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .control-title {
+            color: #00FFCC;
+            font-size: 13px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            flex-grow: 1;
+            background: #000;
+            border: 1px solid #00FFCC;
+            height: 8px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00FFCC;
+            border: 1px solid #000;
+            cursor: pointer;
+            box-shadow: 0 0 6px #00FFCC;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .slider-val {
+            font-size: 14px;
+            font-weight: bold;
+            color: #00FFCC;
+            min-width: 15px;
+            text-align: right;
+        }
+
+        /* Terminal de Notificaciones */
+        .terminal-card {
+            width: 100%;
+            max-width: 1000px;
+            margin-top: 20px;
+            background: #000;
+            border: 1px solid #00FFCC;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.1);
+        }
+
+        .terminal-log {
+            font-size: 12px;
+            color: #00FFCC;
+            height: 80px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            background: #000;
+            border: 1px solid rgba(0, 255, 204, 0.2);
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .terminal-log::-webkit-scrollbar {
+            width: 4px;
+        }
+        .terminal-log::-webkit-scrollbar-track {
+            background: #000;
+        }
+        .terminal-log::-webkit-scrollbar-thumb {
+            background: #00FFCC;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <h1>CONSOLA DE CONTROL BIÓNICO</h1>
+            <div style="font-size: 11px; color: #888; margin-top: 4px; letter-spacing: 1px;">CENTRAL TERRENA - ENLACE WI-FI</div>
+        </div>
+        <div class="status-tag" id="statusTag">
+            <span class="status-dot"></span>
+            SISTEMA ONLINE
+        </div>
+    </header>
+
+    <div class="dashboard">
+        <!-- MÓDULO ÓPTICO -->
+        <div class="card video-card">
+            <h3>🎥 STREAMING ÓPTICO DIRECTO</h3>
+            <img id="vid" src="http://192.168.206.82/" alt="Stream de Video" />
+        </div>
+
+        <!-- MÓDULO ACÚSTICO -->
+        <div class="card">
+            <h3>🎙️ VÚMETROS ACÚSTICOS (DMA I2S)</h3>
+            <div class="vu-container">
+                <div class="vu-track-wrapper">
+                    <div class="vu-track">
+                        <div id="bL" class="vu-fill"></div>
+                    </div>
+                    <span class="vu-label">CANAL L</span>
+                </div>
+                <div class="vu-track-wrapper">
+                    <div class="vu-track">
+                        <div id="bR" class="vu-fill"></div>
+                    </div>
+                    <span class="vu-label">CANAL R</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO TELEMETRÍA Y CONTROLES -->
+        <div class="card">
+            <h3>📊 TELEMETRÍA Y ACTUADORES</h3>
+            <div class="data-line"><span>Temperatura</span><span id="t">0.0 °C</span></div>
+            <div class="data-line"><span>Presión Barométrica</span><span id="p">0 hPa</span></div>
+            <div class="data-line"><span>Humedad Higrómetro</span><span id="h">0.0 %</span></div>
+            <div class="data-line"><span>GPS Latitud</span><span id="lat">0.00000</span></div>
+            <div class="data-line"><span>GPS Longitud</span><span id="lon">0.00000</span></div>
+
+            <!-- CONTROLES -->
+            <div class="control-group">
+                <div class="control-title">💡 Iluminación LED (0-3)</div>
+                <div class="slider-wrapper">
+                    <input type="range" min="0" max="3" step="1" id="lightSlider" value="0">
+                    <span class="slider-val" id="lightVal">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TERMINAL DE COMUNICACIÓN -->
+    <div class="terminal-card">
+        <h3 style="margin-bottom: 5px;">💻 LOG DE SISTEMA (DIAGNÓSTICO DE RED)</h3>
+        <div class="terminal-log" id="terminalLog">Estación central en espera de acoplamiento de red...</div>
+    </div>
+
+    <script>
+        const logEl = document.getElementById('terminalLog');
+        const statusTag = document.getElementById('statusTag');
+
+        function printLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            logEl.textContent += `\n[${time}] ${msg}`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // 1. Arquitectura de Conexión WebSocket
+        const ws = new WebSocket('ws://' + window.location.hostname + ':8081');
+
+        ws.onopen = () => {
+            printLog("Establecido enlace de WebSocket exitosamente.");
+            statusTag.style.animation = "pulse 1.5s infinite";
+        };
+
+        ws.onclose = () => {
+            printLog("Desconectado de la central. Intentando reconexión...");
+            statusTag.style.animation = "none";
+            statusTag.style.opacity = "0.5";
+        };
+
+        ws.onerror = () => {
+            printLog("Error en el enlace de WebSocket.");
+        };
+
+        // 2. Manejo de la Telemetría por WebSocket
+        ws.onmessage = (e) => {
+            if (e.data instanceof ArrayBuffer) return; // Ignora residuales binarios
+
+            try {
+                const res = JSON.parse(e.data);
+                if (res.telemetria) {
+                    // Formato: A:L,R|M:mq1,mq2|P:pm25|G:lat,lon|C:t,p,h
+                    const s = res.telemetria.trim().split('|');
+
+                    // Audio (L y R)
+                    const audio = s[0].substring(2).split(',');
+                    document.getElementById('bL').style.height = audio[0] + '%';
+                    document.getElementById('bR').style.height = audio[1] + '%';
+
+                    // GPS (Latitud y Longitud a 5 decimales)
+                    const gps = s[3].substring(2).split(',');
+                    document.getElementById('lat').innerText = parseFloat(gps[0]).toFixed(5);
+                    document.getElementById('lon').innerText = parseFloat(gps[1]).toFixed(5);
+
+                    // Clima (Temperatura/Humedad a 1 decimal, Presión a entero)
+                    const clima = s[4].substring(2).split(',');
+                    document.getElementById('t').innerText = parseFloat(clima[0]).toFixed(1) + " °C";
+                    document.getElementById('p').innerText = Math.round(parseFloat(clima[1])) + " hPa";
+                    document.getElementById('h').innerText = parseFloat(clima[2]).toFixed(1) + " %";
+                }
+            } catch (err) {
+                // Silenciar formateos menores de tramas incompletas
+            }
+        };
+
+        // 3. Interfaz de Actuadores (Bilateral)
+        const lightSlider = document.getElementById('lightSlider');
+        const lightVal = document.getElementById('lightVal');
+
+        lightSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            lightVal.textContent = val;
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const comando = {
+                    tipo: "CONTROL",
+                    luces: val,
+                    motorA: 180,
+                    motorB: 180
+                };
+                ws.send(JSON.stringify(comando));
+                printLog(`Inyección de comando: luces = ${val}, motores = 180`);
+            }
+        });
+    </script>
+</body>
+</html>
