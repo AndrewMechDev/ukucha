@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 type SideNavProps = {
@@ -9,35 +9,15 @@ type SideNavProps = {
 type NavItem = {
   id: "fleet" | "alerts" | "settings";
   label: string;
-  icon: ReactNode;
+  icon: string;
+  route: string;
   badge?: number;
 };
 
-const icons = {
-  fleet: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5 9.5 12 6l7 3.5v7L12 20l-7-3.5v-7Z" />
-      <path d="m5 9.5 7 3.5 7-3.5M12 13v7M8.5 6.2 12 8l3.5-1.8" />
-    </svg>
-  ),
-  alerts: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 8h18c0-1-3-1-3-8Z" />
-      <path d="M10 21h4" />
-    </svg>
-  ),
-  settings: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" />
-    </svg>
-  ),
-};
-
 const navItems: NavItem[] = [
-  { id: "fleet", label: "Flota", icon: icons.fleet },
-  { id: "alerts", label: "Alertas", icon: icons.alerts, badge: 3 },
-  { id: "settings", label: "Ajustes", icon: icons.settings },
+  { id: "fleet", label: "Flota", icon: "deployed_code", route: "/" },
+  { id: "alerts", label: "Alertas", icon: "notifications", route: "/alerts", badge: 3 },
+  { id: "settings", label: "Ajustes", icon: "settings", route: "/settings" },
 ];
 
 function Brand({ compact = false, onClick }: { compact?: boolean; onClick: () => void }) {
@@ -50,13 +30,14 @@ function Brand({ compact = false, onClick }: { compact?: boolean; onClick: () =>
       aria-expanded={!compact}
     >
       <span className="brand__mark" aria-hidden="true">
-        <span />
+        <span className="material-symbols-rounded">pest_control_rodent</span>
       </span>
-      {!compact && <span className="brand__wordmark">UKUCHA</span>}
+      <span className="brand__copy">
+        <span className="brand__wordmark">Ukucha</span>
+        <span className="brand__subtitle">Sar Dashboard</span>
+      </span>
       <span className="brand__chevron" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d={compact ? "m9 6 6 6-6 6" : "m15 6-6 6 6 6"} />
-        </svg>
+        <span className="material-symbols-rounded">{compact ? "chevron_right" : "chevron_left"}</span>
       </span>
     </button>
   );
@@ -70,6 +51,17 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
     : location.pathname.startsWith("/settings")
       ? "settings"
       : "fleet";
+  const [requestedItem, setRequestedItem] = useState<NavItem["id"] | null>(null);
+  const activeItem = requestedItem ?? currentItem;
+
+  useEffect(() => {
+    setRequestedItem(null);
+  }, [location.pathname]);
+
+  const selectItem = (item: NavItem) => {
+    setRequestedItem(item.id);
+    navigate(item.route);
+  };
 
   return (
     <>
@@ -81,18 +73,14 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
         <nav className="side-nav__items" aria-label="Navegación principal">
           {navItems.map((item) => (
             <button
-              className={`nav-item${currentItem === item.id ? " nav-item--active" : ""}`}
+              className={`nav-item${activeItem === item.id ? " nav-item--active" : ""}`}
               type="button"
               key={item.id}
-              onClick={() => {
-                if (item.id === "fleet") navigate("/");
-                if (item.id === "alerts") navigate("/alerts");
-                if (item.id === "settings") navigate("/settings");
-              }}
-              aria-current={currentItem === item.id ? "page" : undefined}
+              onClick={() => selectItem(item)}
+              aria-current={activeItem === item.id ? "page" : undefined}
               aria-label={collapsed ? item.label : undefined}
             >
-              <span className="nav-item__icon">{item.icon}</span>
+              <span className="nav-item__icon material-symbols-rounded" aria-hidden="true">{item.icon}</span>
               {!collapsed && <span className="nav-item__label">{item.label}</span>}
               {item.badge !== undefined && (
                 <span className="nav-item__badge" aria-label={`${item.badge} alertas críticas sin reconocer`}>
@@ -114,17 +102,13 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       <nav className="bottom-nav" aria-label="Navegación principal">
         {navItems.map((item) => (
           <button
-            className={`bottom-nav__item${currentItem === item.id ? " bottom-nav__item--active" : ""}`}
+            className={`bottom-nav__item${activeItem === item.id ? " bottom-nav__item--active" : ""}`}
             type="button"
             key={item.id}
-            onClick={() => {
-              if (item.id === "fleet") navigate("/");
-              if (item.id === "alerts") navigate("/alerts");
-              if (item.id === "settings") navigate("/settings");
-            }}
-            aria-current={currentItem === item.id ? "page" : undefined}
+            onClick={() => selectItem(item)}
+            aria-current={activeItem === item.id ? "page" : undefined}
           >
-            <span className="nav-item__icon">{item.icon}</span>
+            <span className="nav-item__icon material-symbols-rounded" aria-hidden="true">{item.icon}</span>
             <span>{item.label}</span>
             {item.badge !== undefined && <span className="bottom-nav__badge">{item.badge}</span>}
           </button>
