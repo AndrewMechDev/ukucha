@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Timeline from "./pages/Timeline";
+import Alerts from "./pages/Alerts";
 import NotFound from "./pages/NotFound";
 
 export default function App() {
@@ -11,6 +12,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="timeline" element={<Timeline />} />
+          <Route path="alerts" element={<Alerts />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

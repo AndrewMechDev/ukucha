@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 
 type SideNavProps = {
   collapsed: boolean;
@@ -62,6 +63,7 @@ function Brand({ compact = false, onClick }: { compact?: boolean; onClick: () =>
 }
 
 export default function SideNav({ collapsed, onToggle }: SideNavProps) {
+  const navigate = useNavigate();
   const [activeItem, setActiveItem] = useState<NavItem["id"]>("fleet");
 
   return (
@@ -77,7 +79,11 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
               className={`nav-item${activeItem === item.id ? " nav-item--active" : ""}`}
               type="button"
               key={item.id}
-              onClick={() => setActiveItem(item.id)}
+              onClick={() => {
+                setActiveItem(item.id);
+                if (item.id === "fleet") navigate("/");
+                if (item.id === "alerts") navigate("/alerts");
+              }}
               aria-current={activeItem === item.id ? "page" : undefined}
               aria-label={collapsed ? item.label : undefined}
             >
