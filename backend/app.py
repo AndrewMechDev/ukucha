@@ -31,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
 import cv2
@@ -66,6 +67,13 @@ TELEMETRY_PORT = int(os.environ.get("UKUCHA_TELEMETRY_PORT", "5002"))
 CONTROL_PORT = int(os.environ.get("UKUCHA_CONTROL_PORT", "4210"))
 CAM_URL = os.environ.get("UKUCHA_CAM_URL", "http://192.168.4.1/")
 ENV_EVERY = int(os.environ.get("UKUCHA_ENV_EVERY", "5"))
+
+# Topologia actual: un unico ESP32-S3 de campo (ver
+# .claude/skills/ukucha/backend-conexion.md). El paquete de telemetria no
+# trae node_id propio (schemas/uplink.py), asi que se etiqueta aca con un
+# identificador fijo -- si en el futuro hay mas de un nodo, esto pasa a
+# derivarse de la IP de origen (ver UdpTransport._node_ip).
+FIELD_NODE_ID = "esp32s3_campo"
 
 
 def _build_persistence_backend() -> PersistenceBackend:
@@ -165,7 +173,8 @@ def create_app() -> FastAPI:
         telemetry_store.update(packet)
         persistence_worker.save_telemetry({
             "kind": "telemetry",
-            "timestamp_ms": None,
+            "node_id": FIELD_NODE_ID,
+            "timestamp_ms": int(time.time() * 1000),
             "data": packet.model_dump(),
         })
 
