@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 type UnitStatus = "safe" | "caution" | "critical" | "offline";
 
@@ -50,6 +51,7 @@ function UnitCard({ unit, onSelect }: { unit: Unit; onSelect: (unit: Unit) => vo
       type="button"
       disabled={unit.status === "offline"}
       onClick={() => onSelect(unit)}
+      title={unit.status === "offline" ? "Sin señal" : `Abrir dashboard de ${unit.id}`}
       aria-label={`${unit.id}, ${unit.statusLabel}, ${unit.zone}`}
     >
       <VideoThumbnail unit={unit} />
@@ -90,10 +92,11 @@ function LinkUnitModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function Home() {
+  const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
 
   const selectUnit = (unit: Unit) => {
-    if (unit.status !== "offline") window.location.hash = `/unit/${unit.id.toLowerCase()}`;
+    if (unit.status !== "offline") navigate(`/unit/${unit.id.toLowerCase()}`);
   };
 
   return (

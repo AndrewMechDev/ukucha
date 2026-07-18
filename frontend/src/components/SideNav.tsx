@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type SideNavProps = {
   collapsed: boolean;
@@ -64,7 +64,12 @@ function Brand({ compact = false, onClick }: { compact?: boolean; onClick: () =>
 
 export default function SideNav({ collapsed, onToggle }: SideNavProps) {
   const navigate = useNavigate();
-  const [activeItem, setActiveItem] = useState<NavItem["id"]>("fleet");
+  const location = useLocation();
+  const currentItem: NavItem["id"] = location.pathname.startsWith("/alerts")
+    ? "alerts"
+    : location.pathname.startsWith("/settings")
+      ? "settings"
+      : "fleet";
 
   return (
     <>
@@ -76,16 +81,15 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
         <nav className="side-nav__items" aria-label="Navegación principal">
           {navItems.map((item) => (
             <button
-              className={`nav-item${activeItem === item.id ? " nav-item--active" : ""}`}
+              className={`nav-item${currentItem === item.id ? " nav-item--active" : ""}`}
               type="button"
               key={item.id}
               onClick={() => {
-                setActiveItem(item.id);
                 if (item.id === "fleet") navigate("/");
                 if (item.id === "alerts") navigate("/alerts");
                 if (item.id === "settings") navigate("/settings");
               }}
-              aria-current={activeItem === item.id ? "page" : undefined}
+              aria-current={currentItem === item.id ? "page" : undefined}
               aria-label={collapsed ? item.label : undefined}
             >
               <span className="nav-item__icon">{item.icon}</span>
@@ -110,11 +114,15 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       <nav className="bottom-nav" aria-label="Navegación principal">
         {navItems.map((item) => (
           <button
-            className={`bottom-nav__item${activeItem === item.id ? " bottom-nav__item--active" : ""}`}
+            className={`bottom-nav__item${currentItem === item.id ? " bottom-nav__item--active" : ""}`}
             type="button"
             key={item.id}
-            onClick={() => setActiveItem(item.id)}
-            aria-current={activeItem === item.id ? "page" : undefined}
+            onClick={() => {
+              if (item.id === "fleet") navigate("/");
+              if (item.id === "alerts") navigate("/alerts");
+              if (item.id === "settings") navigate("/settings");
+            }}
+            aria-current={currentItem === item.id ? "page" : undefined}
           >
             <span className="nav-item__icon">{item.icon}</span>
             <span>{item.label}</span>

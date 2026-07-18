@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 type Severity = "critical" | "caution";
 type AlertFilter = "Todas" | "Críticas" | "Advertencias";
@@ -40,14 +41,14 @@ export function EmptyAlerts() {
   return <div className="alerts-empty"><span className="alerts-empty__badge"><i /> SEGURO</span><h2>Sin alertas activas — todo en orden</h2></div>;
 }
 
-function AlertModal({ alert, onClose, onAcknowledge }: { alert: Alert; onClose: () => void; onAcknowledge: () => void }) {
+function AlertModal({ alert, onClose, onAcknowledge, onViewUnit }: { alert: Alert; onClose: () => void; onAcknowledge: () => void; onViewUnit: () => void }) {
   return (
     <div className="alerts-modal-backdrop" role="presentation">
       <section className="alerts-modal" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title">
         <header><div><p className="eyebrow">CONFIRMAR ALERTA</p><h2 id="alert-modal-title">Confirmar Alerta {alert.severity === "critical" ? "Crítica" : "de Precaución"}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
         <div className={`alerts-modal__summary alerts-modal__summary--${alert.severity}`}><SeverityTag severity={alert.severity} /><strong>{alert.unit} · {alert.zone}</strong><p>{alert.description}</p><time>{alert.timestamp} · {alert.age}</time></div>
         <div className="alerts-modal__recommendation"><p>RECOMENDACIÓN DEL COPILOTO</p><strong>{alert.recommendation}</strong></div>
-        <div className="alerts-modal__actions"><button className="alerts-secondary-button" type="button" onClick={onClose}>Cerrar</button>{!alert.acknowledged && <button className="alerts-primary-button" type="button" onClick={onAcknowledge}>Reconocer alerta</button>}</div>
+        <div className="alerts-modal__actions"><button className="alerts-secondary-button" type="button" onClick={onViewUnit}>Ver unidad</button><button className="alerts-secondary-button" type="button" onClick={onClose}>Cerrar</button>{!alert.acknowledged && <button className="alerts-primary-button" type="button" onClick={onAcknowledge}>Reconocer alerta</button>}</div>
       </section>
     </div>
   );
@@ -67,6 +68,7 @@ function AlertRow({ alert, onOpen, onAcknowledge }: { alert: Alert; onOpen: () =
 }
 
 export default function Alerts() {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<AlertFilter>("Todas");
   const [unitFilter, setUnitFilter] = useState("Todas las unidades");
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
@@ -98,7 +100,7 @@ export default function Alerts() {
         <div className="alerts-table__body">{visibleAlerts.map((alert) => <AlertRow key={alert.id} alert={alert} onOpen={() => setSelectedAlert(alert)} onAcknowledge={() => acknowledge(alert)} />)}</div>
       </div>}
       {filterSheetOpen && <div className="alerts-filter-sheet-backdrop" role="presentation" onClick={() => setFilterSheetOpen(false)}><div className="alerts-filter-sheet" role="dialog" aria-label="Filtros de alertas" onClick={(event) => event.stopPropagation()}><span className="alerts-sheet-handle" /><header><h2>Filtrar alertas</h2><button type="button" onClick={() => setFilterSheetOpen(false)} aria-label="Cerrar filtros">{icons.close}</button></header><div className="alerts-sheet-options">{(["Todas", "Críticas", "Advertencias"] as AlertFilter[]).map((item) => <button className={filter === item ? "is-selected" : ""} type="button" onClick={() => { setFilter(item); setFilterSheetOpen(false); }} key={item}>{item}</button>)}<select aria-label="Filtrar unidades" value={unitFilter} onChange={(event) => { setUnitFilter(event.target.value); setFilterSheetOpen(false); }}><option>Todas las unidades</option><option>Ukucha-01</option><option>Ukucha-02</option><option>Ukucha-03</option><option>Ukucha-04</option></select></div></div></div>}
-      {selectedAlert && <AlertModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} onAcknowledge={() => acknowledge(selectedAlert)} />}
+      {selectedAlert && <AlertModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} onAcknowledge={() => acknowledge(selectedAlert)} onViewUnit={() => { setSelectedAlert(null); navigate(`/unit/${selectedAlert.unit.toLowerCase()}`); }} />}
     </section>
   );
 }
