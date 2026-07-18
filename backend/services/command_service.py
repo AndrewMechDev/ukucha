@@ -16,7 +16,6 @@ from __future__ import annotations
 import itertools
 import logging
 import threading
-import time
 from dataclasses import dataclass
 from typing import Callable, Dict, Optional, Type
 
@@ -61,10 +60,12 @@ class CommandService:
         send_fn: SendFn,
         ack_timeout_s: float = _ACK_TIMEOUT_S,
         on_log: Optional[LogFn] = None,
+        target_node: str = "esp32s3_campo",
     ):
         self._send_fn = send_fn
         self._ack_timeout_s = ack_timeout_s
         self._on_log = on_log
+        self._target_node = target_node
         self._cmd_id_counter = itertools.count(1)
         self._pending: Dict[int, dict] = {}  # cmd_id -> {"timer", "command"}
         self._lock = threading.Lock()
@@ -84,7 +85,7 @@ class CommandService:
         self._send_fn(cmd)
         self._log({
             "cmd_id": cmd_id, "command": command, "params": validated.model_dump(),
-            "event": "sent", "status": None, "ts": time.time(),
+            "target_node": self._target_node, "event": "sent", "status": None,
         })
         return DispatchResult(cmd_id=cmd_id, command=command, control=cmd)
 
@@ -98,7 +99,7 @@ class CommandService:
             logger.info("cmd_id=%d confirmado (status=%s)", cmd_id, status)
             self._log({
                 "cmd_id": cmd_id, "command": pending["command"], "params": None,
-                "event": "ack", "status": status, "ts": time.time(),
+                "target_node": self._target_node, "event": "ack", "status": status,
             })
         else:
             logger.warning(
@@ -124,7 +125,7 @@ class CommandService:
             )
             self._log({
                 "cmd_id": cmd_id, "command": pending["command"], "params": None,
-                "event": "timeout", "status": None, "ts": time.time(),
+                "target_node": self._target_node, "event": "timeout", "status": None,
             })
 
     def _log(self, record: dict) -> None:

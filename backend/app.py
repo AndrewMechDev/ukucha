@@ -182,6 +182,7 @@ def create_app() -> FastAPI:
     command_service = CommandService(
         send_fn=lambda cmd: serial_manager.send_command(cmd),
         on_log=persistence_worker.save_command_log,
+        target_node=FIELD_NODE_ID,
     )
 
     packet_count = 0
