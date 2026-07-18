@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useLanguage } from "./LanguageContext";
 
 type SideNavProps = {
   collapsed: boolean;
@@ -49,6 +50,7 @@ function Brand({ compact = false, onClick }: { compact?: boolean; onClick: () =>
 export default function SideNav({ collapsed, onToggle }: SideNavProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, language } = useLanguage();
   const panel = new URLSearchParams(location.search).get("panel");
   const currentItem: NavItem["id"] = panel === "alerts"
     ? "alerts"
@@ -71,6 +73,13 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
     navigate({ pathname: location.pathname, search: `?panel=${item.id}` });
   };
 
+  const getLabel = (item: NavItem) => {
+    if (item.id === "fleet") return t("flota");
+    if (item.id === "alerts") return t("alertas");
+    if (item.id === "settings") return t("ajustes");
+    return item.label;
+  };
+
   return (
     <>
       <aside className={`side-nav${collapsed ? " side-nav--collapsed" : ""}`}>
@@ -86,19 +95,19 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
               key={item.id}
               onClick={() => selectItem(item)}
               aria-current={activeItem === item.id ? "page" : undefined}
-              aria-label={collapsed ? item.label : undefined}
+              aria-label={collapsed ? getLabel(item) : undefined}
             >
               <span className="nav-item__icon material-symbols-rounded" aria-hidden="true">{item.icon}</span>
-              {!collapsed && <span className="nav-item__label">{item.label}</span>}
+              {!collapsed && <span className="nav-item__label">{getLabel(item)}</span>}
               {item.badge !== undefined && (
-                <span className="nav-item__badge" aria-label={`${item.badge} alertas críticas sin reconocer`}>
+                <span className="nav-item__badge" aria-label={`${item.badge} ${t("alertas").toLowerCase()}`}>
                   {item.badge}
                 </span>
               )}
-              {collapsed && <span className="glass-tooltip">{item.label}</span>}
+              {collapsed && <span className="glass-tooltip">{getLabel(item)}</span>}
             </button>
           ))}
-          {!collapsed && <span className="side-nav__group-label">Opciones</span>}
+          {!collapsed && <span className="side-nav__group-label">{language === "English" ? "Options" : "Opciones"}</span>}
           {optionItems.map((item) => (
             <button
               className={`nav-item${activeItem === item.id ? " nav-item--active" : ""}`}
@@ -106,20 +115,19 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
               key={item.id}
               onClick={() => selectItem(item)}
               aria-current={activeItem === item.id ? "page" : undefined}
-              aria-label={collapsed ? item.label : undefined}
+              aria-label={collapsed ? getLabel(item) : undefined}
             >
               <span className="nav-item__icon material-symbols-rounded" aria-hidden="true">{item.icon}</span>
-              {!collapsed && <span className="nav-item__label">{item.label}</span>}
+              {!collapsed && <span className="nav-item__label">{getLabel(item)}</span>}
               {item.badge !== undefined && (
-                <span className="nav-item__badge" aria-label={`${item.badge} alertas críticas sin reconocer`}>
+                <span className="nav-item__badge" aria-label={`${item.badge} ${t("alertas").toLowerCase()}`}>
                   {item.badge}
                 </span>
               )}
-              {collapsed && <span className="glass-tooltip">{item.label}</span>}
+              {collapsed && <span className="glass-tooltip">{getLabel(item)}</span>}
             </button>
           ))}
         </nav>
-
       </aside>
 
       <nav className="bottom-nav" aria-label="Navegación principal">
@@ -132,7 +140,7 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
             aria-current={activeItem === item.id ? "page" : undefined}
           >
             <span className="nav-item__icon material-symbols-rounded" aria-hidden="true">{item.icon}</span>
-            <span>{item.label}</span>
+            <span>{getLabel(item)}</span>
             {item.badge !== undefined && <span className="bottom-nav__badge">{item.badge}</span>}
           </button>
         ))}

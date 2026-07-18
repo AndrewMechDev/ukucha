@@ -1,0 +1,35 @@
+{
+  "name": "Ukucha SAR Dashboard",
+  "short_name": "Ukucha",
+  "description": "Monitoreo y asistencia para unidades Ukucha.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#121417",
+  "theme_color": "#f4801a",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/ukucha-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Flota",
+      "short_name": "Flota",
+      "url": "/",
+      "icons": [{ "src": "/ukucha-icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Alertas",
+      "short_name": "Alertas",
+      "url": "/?panel=alerts",
+      "icons": [{ "src": "/ukucha-icon.svg", "sizes": "any" }]
+    }
+  ]
+}

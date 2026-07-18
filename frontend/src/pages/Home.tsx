@@ -4,6 +4,8 @@ import {
   UnitSummaryCard,
   type TelemetrySnapshot,
 } from "../components/TelemetryCards";
+import { useLanguage } from "../components/LanguageContext";
+import PwaInstallButton from "../components/PwaInstallButton";
 
 type UnitStatus = "safe" | "caution" | "critical" | "offline";
 
@@ -31,6 +33,13 @@ const icons = {
 };
 
 function UnitCard({ unit, onSelect }: { unit: Unit; onSelect: (unit: Unit) => void }) {
+  const { t } = useLanguage();
+  const zoneLabel = t(unit.zone) || unit.zone;
+  const timeFormatted = unit.updated
+    .replace("hace", t("hace"))
+    .replace("s", t("segundos_abr"))
+    .replace("m", t("minutos_abr"));
+
   return (
     <article
       className={`fleet-unit-card fleet-unit-card--${unit.status}`}
@@ -40,26 +49,38 @@ function UnitCard({ unit, onSelect }: { unit: Unit; onSelect: (unit: Unit) => vo
       onKeyDown={(event) => {
         if (unit.status !== "offline" && (event.key === "Enter" || event.key === " ")) onSelect(unit);
       }}
-      title={unit.status === "offline" ? "Sin señal" : `Abrir dashboard de ${unit.id}`}
-      aria-label={`${unit.id}, ${unit.statusLabel}, ${unit.zone}`}
+      title={unit.status === "offline" ? t("sin_senal") : `${t("abrir_dashboard").replace(" →", "")} ${unit.id}`}
+      aria-label={`${unit.id}, ${t(unit.status)}, ${zoneLabel}`}
     >
       <header className="fleet-unit-card__heading">
-        <div><p className="fleet-unit-card__overline">UNIDAD DE CAMPO</p><h2>{unit.id}</h2><span>{unit.zone}</span></div>
-        <div className="fleet-unit-card__status"><span className={`fleet-status-tag fleet-status-tag--${unit.status}`}>{unit.statusLabel}</span><time>{unit.updated}</time></div>
+        <div>
+          <p className="fleet-unit-card__overline">{t("unidad_de_campo")}</p>
+          <h2>{unit.id}</h2>
+          <span>{zoneLabel}</span>
+        </div>
+        <div className="fleet-unit-card__status">
+          <span className={`fleet-status-tag fleet-status-tag--${unit.status}`}>{t(unit.status)}</span>
+          <time>{timeFormatted}</time>
+        </div>
       </header>
       <UnitSummaryCard battery={unit.status === "critical" ? 42 : unit.status === "caution" ? 58 : 70} sensorValue={unit.status === "critical" ? "19.6%" : "28.4°C"} sensorLabel={unit.status === "critical" ? "O₂" : "TEMP"} />
-      <footer className="fleet-unit-card__footer"><span>PRESIÓN</span><strong>{unit.telemetry.environment.pressureHpa === null ? "N/D" : `${unit.telemetry.environment.pressureHpa.toFixed(1)} hPa`}</strong><b>{unit.status === "offline" ? "SIN DATOS" : "ABRIR DASHBOARD →"}</b></footer>
+      <footer className="fleet-unit-card__footer">
+        <span>{t("presion")}</span>
+        <strong>{unit.telemetry.environment.pressureHpa === null ? t("sin_datos") : `${unit.telemetry.environment.pressureHpa.toFixed(1)} hPa`}</strong>
+        <b>{unit.status === "offline" ? t("sin_datos") : t("abrir_dashboard")}</b>
+      </footer>
     </article>
   );
 }
 
 function EmptyFleetState({ onLink }: { onLink: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="fleet-empty">
       <div className="fleet-empty__icon">{icons.link}</div>
-      <h2>Sin unidades registradas</h2>
-      <p>Vincula una unidad para comenzar a monitorear tu flota.</p>
-      <button className="primary-button" type="button" onClick={onLink}>{icons.link}<span>Vincular unidad</span></button>
+      <h2>{t("sin_unidades_registradas")}</h2>
+      <p>{t("vincula_unidad_desc")}</p>
+      <button className="primary-button" type="button" onClick={onLink}>{icons.link}<span>{t("vincular_unidad")}</span></button>
     </div>
   );
 }
@@ -67,6 +88,7 @@ function EmptyFleetState({ onLink }: { onLink: () => void }) {
 type LinkStep = "methods" | "scanning" | "results" | "success";
 
 function LinkUnitModal({ onClose }: { onClose: () => void }) {
+  const { t, language } = useLanguage();
   const [step, setStep] = useState<LinkStep>("methods");
 
   useEffect(() => {
@@ -89,11 +111,11 @@ function LinkUnitModal({ onClose }: { onClose: () => void }) {
     return (
       <div className="fleet-modal-backdrop" role="presentation">
         <section className="fleet-modal fleet-modal--scanner" role="dialog" aria-modal="true" aria-labelledby="scan-title">
-          <header><div><p className="eyebrow">NUEVA CONEXIÓN</p><h2 id="scan-title">Buscando Ukuchas</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
+          <header><div><p className="eyebrow">{t("nueva_conexion")}</p><h2 id="scan-title">{t("buscando_ukuchas")}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
           <div className="fleet-scanner" aria-live="polite">
             <div className="fleet-scanner__waves"><span /><span /><span /><b>{icons.wifi}</b></div>
-            <strong>Escaneando frecuencias de telemetría...</strong>
-            <span>Buscando unidades disponibles en tu red Wi‑Fi</span>
+            <strong>{t("escaneando_frecuencias")}</strong>
+            <span>{t("buscando_wifi")}</span>
           </div>
         </section>
       </div>
@@ -104,13 +126,27 @@ function LinkUnitModal({ onClose }: { onClose: () => void }) {
     return (
       <div className="fleet-modal-backdrop" role="presentation">
         <section className="fleet-modal fleet-modal--results" role="dialog" aria-modal="true" aria-labelledby="results-title">
-          <header><div><p className="eyebrow">RED LOCAL</p><h2 id="results-title">Ukuchas disponibles</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
-          <p className="fleet-modal__description">Selecciona una unidad para conectarla a tu flota.</p>
+          <header><div><p className="eyebrow">{t("red_local")}</p><h2 id="results-title">{t("ukuchas_disponibles")}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
+          <p className="fleet-modal__description">{t("selecciona_unidad")}</p>
           <div className="fleet-discovered-list">
-            <button type="button" className="fleet-discovered-unit" onClick={connectUnit}><span className="fleet-discovered-unit__signal">⌁</span><span><strong>Ukucha-05</strong><small>Zona Norte · Señal excelente</small></span><b>Conectar →</b></button>
-            <button type="button" className="fleet-discovered-unit" onClick={connectUnit}><span className="fleet-discovered-unit__signal">⌁</span><span><strong>Ukucha-06</strong><small>Zona Sur · Señal buena</small></span><b>Conectar →</b></button>
+            <button type="button" className="fleet-discovered-unit" onClick={connectUnit}>
+              <span className="fleet-discovered-unit__signal">⌁</span>
+              <span>
+                <strong>Ukucha-05</strong>
+                <small>{language === "English" ? "North Zone · Excellent signal" : "Zona Norte · Señal excelente"}</small>
+              </span>
+              <b>{t("conectar")} →</b>
+            </button>
+            <button type="button" className="fleet-discovered-unit" onClick={connectUnit}>
+              <span className="fleet-discovered-unit__signal">⌁</span>
+              <span>
+                <strong>Ukucha-06</strong>
+                <small>{language === "English" ? "South Zone · Good signal" : "Zona Sur · Señal buena"}</small>
+              </span>
+              <b>{t("conectar")} →</b>
+            </button>
           </div>
-          <button className="secondary-button fleet-rescan" type="button" onClick={() => setStep("scanning")}>↻ Buscar de nuevo</button>
+          <button className="secondary-button fleet-rescan" type="button" onClick={() => setStep("scanning")}>↻ {t("buscar_de_nuevo")}</button>
         </section>
       </div>
     );
@@ -121,10 +157,10 @@ function LinkUnitModal({ onClose }: { onClose: () => void }) {
       <div className="fleet-modal-backdrop" role="presentation">
         <section className="fleet-modal fleet-modal--success" role="dialog" aria-modal="true" aria-labelledby="success-title">
           <div className="fleet-success-icon">✓</div>
-          <p className="eyebrow">CONEXIÓN COMPLETADA</p>
-          <h2 id="success-title">Ukucha-05 conectada</h2>
-          <p className="fleet-modal__description">La unidad ya está transmitiendo datos en tu red Wi‑Fi.</p>
-          <button className="primary-button" type="button" onClick={onClose}>Ver unidad</button>
+          <p className="eyebrow">{t("conexion_completada")}</p>
+          <h2 id="success-title">{language === "English" ? "Ukucha-05 connected" : "Ukucha-05 conectada"}</h2>
+          <p className="fleet-modal__description">{t("unidad_transmitiendo")}</p>
+          <button className="primary-button" type="button" onClick={onClose}>{t("ver_unidad")}</button>
         </section>
       </div>
     );
@@ -133,11 +169,11 @@ function LinkUnitModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fleet-modal-backdrop" role="presentation">
       <section className="fleet-modal" role="dialog" aria-modal="true" aria-labelledby="link-unit-title">
-        <header><div><p className="eyebrow">NUEVA CONEXIÓN</p><h2 id="link-unit-title">Vincular Nueva Unidad</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
-        <p className="fleet-modal__description">Busca las unidades disponibles en tu red local para añadirlas a la flota.</p>
+        <header><div><p className="eyebrow">{t("nueva_conexion")}</p><h2 id="link-unit-title">{t("vincular_nueva_unidad")}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
+        <p className="fleet-modal__description">{t("buscar_unidades_desc")}</p>
         <div className="fleet-connection-methods">
-          <button type="button" className="fleet-connection-method" onClick={() => setStep("scanning")}><span className="fleet-method-icon">{icons.wifi}</span><span><strong>Vía Wi‑Fi</strong><small>Detección automática en la red local</small></span><b>→</b></button>
-          <button type="button" className="fleet-connection-method fleet-connection-method--disabled" disabled><span className="fleet-method-icon">ᛒ</span><span><strong>Vía Bluetooth</strong><small>Próximamente disponible</small></span><b>→</b></button>
+          <button type="button" className="fleet-connection-method" onClick={() => setStep("scanning")}><span className="fleet-method-icon">{icons.wifi}</span><span><strong>{t("via_wifi")}</strong><small>{t("detect_auto")}</small></span><b>→</b></button>
+          <button type="button" className="fleet-connection-method fleet-connection-method--disabled" disabled><span className="fleet-method-icon">ᛒ</span><span><strong>{t("via_bluetooth")}</strong><small>{t("prox_disponible")}</small></span><b>→</b></button>
         </div>
       </section>
     </div>
@@ -146,6 +182,7 @@ function LinkUnitModal({ onClose }: { onClose: () => void }) {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [modalOpen, setModalOpen] = useState(false);
 
   const selectUnit = (unit: Unit) => {
@@ -155,8 +192,15 @@ export default function Home() {
   return (
     <section className="fleet-screen">
       <header className="fleet-header">
-        <div><p className="eyebrow">OPERACIÓN EN CURSO</p><h1>Flota</h1><p className="fleet-summary"><strong>3</strong> unidades activas · <strong>1</strong> en alerta</p></div>
-        <button className="primary-button fleet-link-button" type="button" onClick={() => setModalOpen(true)}>{icons.plus}<span>Vincular unidad</span></button>
+        <div>
+          <p className="eyebrow">{t("operacion_en_curso")}</p>
+          <h1>{t("flota")}</h1>
+          <p className="fleet-summary"><strong>3</strong> {t("unidades_activas")} · <strong>1</strong> {t("en_alerta")}</p>
+        </div>
+        <div className="fleet-header__actions">
+          <PwaInstallButton collapsed={false} />
+          <button className="primary-button fleet-link-button" type="button" onClick={() => setModalOpen(true)}>{icons.plus}<span>{t("vincular_unidad")}</span></button>
+        </div>
       </header>
       <div className="fleet-grid" aria-label="Unidades de la flota">
         {units.map((unit) => <UnitCard unit={unit} onSelect={selectUnit} key={unit.id} />)}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import SideNav from "./SideNav";
 import Alerts from "../pages/Alerts";
@@ -9,6 +9,15 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const panel = new URLSearchParams(location.search).get("panel");
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    } else {
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  }, []);
 
   const closePanel = () => {
     navigate({ pathname: location.pathname, search: "" });
