@@ -1,6 +1,40 @@
 # Skill: UKUCHA Backend v2 — Enlace Serial + Deteccion + WebSocket + Persistencia
 
-## Objetivo
+## ACTUALIZACION — hardware real confirmado (rama `feature/backend`, ukucha)
+
+Todo el diseño original de este documento (secciones de abajo) se escribio
+**antes** de tener firmware/hardware confirmado, como el propio documento
+ya advertia en "Gaps y decisiones conocidas" (`CmdAckPacket` no confirmado).
+Al integrar el codigo real del compañero de hardware (`appflores/`:
+`server.js`, `record_serial.js`, `esp32s3_firmware.ino`,
+`esp32cam_firmware.ino`) se confirmaron varias divergencias. **El diseño
+de abajo queda como contexto historico de arquitectura (Ports & Adapters
+sigue vigente), pero los detalles de protocolo/topologia estan
+desactualizados.** La fuente de verdad actual es el codigo en
+`backend/schemas/uplink.py`, `backend/schemas/downlink.py`,
+`backend/adapters/udp_transport.py` y `backend/services/mjpeg_client.py`.
+
+Divergencias confirmadas:
+
+| Tema | Diseño original (abajo) | Hardware real |
+|---|---|---|
+| Topologia | ESP32-CAM + 3x ESP32-S3 + dongle No3 (ESP-NOW -> serial USB) | ESP32-CAM (video) + 1x ESP32-S3 de campo (sensores), ambos WiFi directo |
+| Transporte de sensores | `SerialTransport` (pyserial, `COM3`) | `UdpTransport`: UDP entrante `:5002` (telemetria), UDP saliente `:4210` (comandos) — IP del nodo autodetectada del primer paquete |
+| Formato de paquete | JSON con `packet_type` discriminador | Texto plano pipe-delimited: `A:volL,volR\|M:mq1,mq2\|P:pm25\|G:lat,lon\|C:temp,presion,humedad` (`TelemetryPacket.from_line`) |
+| Video | `FramePacket` fragmentado + `FrameReassembler` sobre el mismo enlace | Stream HTTP MJPEG propio del ESP32-CAM (`multipart/x-mixed-replace`, puerto 80) leido por `MjpegClient` — `FrameReassembler` se elimino del repo |
+| Comandos | JSON `{target_node, cmd_id, command, params}` con ack (`CmdAckPacket`) | Texto plano `C:<luces>,<motorA>,<motorB>` sin ack (`ControlCommand.to_wire()`); un solo comando `set_actuators` |
+| GPS | `{lat, lon, fix, sats}` | Solo `{lat, lon}` (`GpsFix`) — fix/sats pendientes en el firmware |
+| Gas (MQ7/MQ136) | `{raw_adc, ppm_est}` | Valores planos `mq1, mq2` (`GasLevels`), **hardcodeados en 0.0 hasta que el compañero de hardware conecte los sensores fisicos** |
+| Polvo | `{pm1_0, pm2_5, pm10}` (PMS5003) | Un solo `dust_ppm` (`P:pm25`), **hardcodeado en 0 hasta que se conecte el sensor fisico** |
+| Clima | No existia en el esquema | `ClimateReading` (temp/presion/humedad, BMP280+AHT20) — SI existe en el firmware real |
+| ToF, gyro, `led_state`, 4 motores | Declarados en el esquema | No existen en el firmware; hay 1 tira NeoPixel (vumetro, no controlable por comando) + 2 motores + `luces`, ambos de solo escritura |
+
+Pendiente (según lo confirmado con el equipo): los sensores MQ (gas) y de
+polvo, y la mejora de precision del GPS, se implementaran en el firmware
+mas adelante — mientras tanto `GasLevels`/`dust_ppm` llegan en `None`/0 y
+el resto del pipeline (deteccion, WS, persistencia) funciona igual.
+
+## Objetivo (diseño original, ver seccion de arriba para el estado real)
 
 `backend/` es el servidor de tiempo real que reemplaza el flujo webcam del
 detector original (`webcam_fall.py`) por una tuberia de hardware de 4 nodos:
