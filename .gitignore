@@ -29,3 +29,16 @@ Thumbs.db
 # Project specific
 *.db
 *.sqlite3
+
+# Evidencia de detecciones (fotos/CSV generados en runtime, no versionar)
+outputs/
+
+# Mediapipe reference repo (submodule/clone)
+Mediapipe-Fall-Detector/
+
+# Agent tooling scratch
+.atl/
+
+# Carpeta local del compañero de hardware (fuera del repo, solo referencia
+# local para el agente/IDE; nunca se commitea desde aqui)
+appflores/
