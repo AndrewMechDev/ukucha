@@ -1,15 +1,20 @@
-"""app.py — arma el backend UKUCHA completo: enlace serial full-duplex,
-reensamblado de frames, deteccion (caidas + EPP + escombros + fusion),
-telemetria con staleness, comandos con cmd_id/ack, y persistencia no
-bloqueante (Supabase o NullPersistenceAdapter), expuesto via FastAPI
-(WebSocket + REST).
+"""app.py — arma el backend UKUCHA completo contra el hardware real: enlace
+UDP/WiFi de telemetria+comandos con el ESP32-S3 de campo, stream HTTP MJPEG
+del ESP32-CAM, deteccion (caidas + EPP + escombros + fusion), telemetria
+con staleness, comandos sin ack (fidelidad al firmware real), y
+persistencia no bloqueante (Supabase o NullPersistenceAdapter), expuesto
+via FastAPI (WebSocket + REST).
 
 Config por variable de entorno (todas opcionales; sin ninguna, el backend
-arranca en modo desarrollo completo: MockTransport + sin persistencia real):
-    UKUCHA_USE_MOCK=1        usar MockTransport en vez del puerto serial real
-    UKUCHA_SERIAL_PORT=COM3  puerto real (ignorado si UKUCHA_USE_MOCK=1)
-    UKUCHA_BAUDRATE=115200
-    UKUCHA_ENV_EVERY=5       correr RescueDetector 1 de cada N frames
+arranca en modo desarrollo completo: mocks de sensor + camara + sin
+persistencia real):
+    UKUCHA_USE_MOCK=1           usar MockTransport + MockCameraFeed en vez
+                                 del hardware real
+    UKUCHA_TELEMETRY_PORT=5002  puerto UDP donde el ESP32-S3 envia telemetria
+    UKUCHA_CONTROL_PORT=4210    puerto UDP donde el ESP32-S3 escucha comandos
+    UKUCHA_CAM_URL=http://192.168.4.1/  URL del stream MJPEG del ESP32-CAM
+                                 (ignorado si UKUCHA_USE_MOCK=1)
+    UKUCHA_ENV_EVERY=5          correr RescueDetector 1 de cada N frames
     SUPABASE_URL / SUPABASE_KEY  si faltan, se usa NullPersistenceAdapter
         (loguea lo que se hubiera guardado, no persiste nada, el resto del
         backend funciona identico -- ver env.example para copiar a .env)
@@ -34,24 +39,19 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.adapters.mock_camera import MockCameraFeed
 from backend.adapters.mock_transport import MockTransport
 from backend.adapters.null_adapter import NullPersistenceAdapter
-from backend.adapters.serial_transport import SerialTransport
+from backend.adapters.udp_transport import UdpTransport
 from backend.api.ws_commands import router as commands_router
 from backend.api.ws_stream import router as stream_router
 from backend.ports.persistence import PersistenceBackend
-from backend.schemas.uplink import (
-    AudioSensorsPacket,
-    CmdAckPacket,
-    EnvActuationPacket,
-    FramePacket,
-    UplinkPacket,
-)
+from backend.schemas.uplink import TelemetryPacket
 from backend.services.command_service import CommandService
 from backend.services.detection_service import DetectionService
 from backend.services.detection_worker import DetectionWorker
 from backend.services.event_detector import EventDetector
-from backend.services.frame_reassembler import FrameReassembler
+from backend.services.mjpeg_client import MjpegClient
 from backend.services.output_builder import build_enriched_output
 from backend.services.persistence_worker import PersistenceWorker
 from backend.services.serial_manager import SerialManager
@@ -62,8 +62,9 @@ load_dotenv()  # no-op si no existe .env
 logger = logging.getLogger(__name__)
 
 USE_MOCK = os.environ.get("UKUCHA_USE_MOCK", "1") != "0"
-SERIAL_PORT = os.environ.get("UKUCHA_SERIAL_PORT", "COM3")
-BAUDRATE = int(os.environ.get("UKUCHA_BAUDRATE", "115200"))
+TELEMETRY_PORT = int(os.environ.get("UKUCHA_TELEMETRY_PORT", "5002"))
+CONTROL_PORT = int(os.environ.get("UKUCHA_CONTROL_PORT", "4210"))
+CAM_URL = os.environ.get("UKUCHA_CAM_URL", "http://192.168.4.1/")
 ENV_EVERY = int(os.environ.get("UKUCHA_ENV_EVERY", "5"))
 
 
@@ -144,7 +145,13 @@ def create_app() -> FastAPI:
         loop.call_soon_threadsafe(_safe_put, app.state.output_queue, output)
 
     detection_worker = DetectionWorker(detection_service, on_result=_on_detection_result)
-    reassembler = FrameReassembler(on_frame_complete=detection_worker.submit_frame)
+
+    # Video: el ESP32-CAM real sirve su propio stream HTTP MJPEG (canal WiFi
+    # separado del enlace de sensores) -- no hay fragmentacion que reensamblar.
+    if USE_MOCK:
+        camera_source = MockCameraFeed(on_frame=detection_worker.submit_frame)
+    else:
+        camera_source = MjpegClient(url=CAM_URL, on_frame=detection_worker.submit_frame)
 
     # send_fn referencia serial_manager, definido mas abajo -- valido porque
     # el lambda solo se ejecuta despues de que serial_manager ya exista
@@ -154,40 +161,31 @@ def create_app() -> FastAPI:
         on_log=persistence_worker.save_command_log,
     )
 
-    def _on_packet(packet: UplinkPacket) -> None:
-        if isinstance(packet, FramePacket):
-            reassembler.add_chunk(packet)
-        elif isinstance(packet, AudioSensorsPacket):
-            telemetry_store.update_audio(packet)
-            persistence_worker.save_telemetry({
-                "kind": "audio_sensors", "node_id": packet.node_id,
-                "timestamp_ms": packet.timestamp_ms,
-                "data": packet.data.model_dump(),
-            })
-        elif isinstance(packet, EnvActuationPacket):
-            telemetry_store.update_env(packet)
-            persistence_worker.save_telemetry({
-                "kind": "env_and_actuation", "node_id": packet.node_id,
-                "timestamp_ms": packet.timestamp_ms,
-                "data": packet.data.model_dump(),
-            })
-        elif isinstance(packet, CmdAckPacket):
-            command_service.on_ack(packet.cmd_id, packet.status)
+    def _on_packet(packet: TelemetryPacket) -> None:
+        telemetry_store.update(packet)
+        persistence_worker.save_telemetry({
+            "kind": "telemetry",
+            "timestamp_ms": None,
+            "data": packet.model_dump(),
+        })
 
-    transport = MockTransport() if USE_MOCK else SerialTransport(port=SERIAL_PORT, baudrate=BAUDRATE)
+    transport = MockTransport() if USE_MOCK else UdpTransport(
+        listen_port=TELEMETRY_PORT, control_port=CONTROL_PORT,
+    )
     serial_manager = SerialManager(transport=transport, on_packet=_on_packet)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.loop = asyncio.get_running_loop()
         persistence_worker.start()
-        reassembler.start()
         detection_worker.start()
+        camera_source.start()
         serial_manager.start()
         broadcast_task = asyncio.create_task(_broadcast_loop(app))
         logger.info(
-            "Backend UKUCHA arriba (fuente=%s, persistencia=%s)",
-            "MockTransport" if USE_MOCK else f"serial:{SERIAL_PORT}",
+            "Backend UKUCHA arriba (sensores=%s, camara=%s, persistencia=%s)",
+            "MockTransport" if USE_MOCK else f"UDP:{TELEMETRY_PORT}/{CONTROL_PORT}",
+            "MockCameraFeed" if USE_MOCK else CAM_URL,
             type(persistence_backend).__name__,
         )
         try:
@@ -195,8 +193,8 @@ def create_app() -> FastAPI:
         finally:
             broadcast_task.cancel()
             serial_manager.stop()
+            camera_source.stop()
             detection_worker.stop()
-            reassembler.stop()
             persistence_worker.stop()
             detection_service.close()
             logger.info("Backend UKUCHA detenido")
@@ -235,7 +233,10 @@ if __name__ == "__main__":
         with client.websocket_connect("/ws/stream") as stream_ws, \
              client.websocket_connect("/ws/commands") as cmd_ws:
 
-            cmd_ws.send_json({"command": "set_leds", "params": {"pattern": "red_solid"}})
+            cmd_ws.send_json({
+                "command": "set_actuators",
+                "params": {"luces": 1, "motor_a": 0, "motor_b": 0},
+            })
             ack = cmd_ws.receive_json()
             logger.info("Respuesta del canal de comandos: %s", ack)
 
@@ -257,8 +258,8 @@ if __name__ == "__main__":
             else:
                 logger.info("Fase 4 verificada: %d frames recibidos por WebSocket", received)
 
-    # --- Fase 5: verificacion directa de EventDetector ---
-    # MockTransport genera ruido sintetico sin personas/escombros reales,
+    # --- Verificacion directa de EventDetector ---
+    # MockCameraFeed genera ruido sintetico sin personas/escombros reales,
     # asi que nunca dispara una alerta organicamente. Se prueba la logica
     # de borde (transicion False->True, sin repetir mientras se mantiene
     # True) construyendo una salida enriquecida sintetica a mano.
@@ -284,4 +285,4 @@ if __name__ == "__main__":
     )
     assert len(events_1) == 1 and events_1[0]["tipo"] == "caida_detectada", "borde de subida no disparo"
     assert len(events_2) == 0, "el evento se repitio sin una nueva transicion"
-    logger.info("Fase 5 verificada: edge-detection de EventDetector correcta")
+    logger.info("Verificacion de edge-detection de EventDetector correcta")

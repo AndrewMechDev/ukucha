@@ -208,10 +208,7 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    from backend.adapters.mock_transport import MockTransport
-    from backend.schemas.uplink import FramePacket, UplinkPacket
-    from backend.services.frame_reassembler import FrameReassembler
-    from backend.services.serial_manager import SerialManager
+    from backend.adapters.mock_camera import MockCameraFeed
 
     logger.info("Cargando DetectionService (puede tardar por la carga de los 3 modelos)...")
     t0 = time.monotonic()
@@ -241,23 +238,15 @@ if __name__ == "__main__":
             ok_decode,
         )
 
-    reassembler = FrameReassembler(on_frame_complete=_on_frame_complete, timeout_s=2.0)
-    reassembler.start()
-
-    def _on_packet(packet: UplinkPacket) -> None:
-        if isinstance(packet, FramePacket):
-            reassembler.add_chunk(packet)
-
-    manager = SerialManager(transport=MockTransport(seed=3), on_packet=_on_packet)
-    manager.start()
+    camera = MockCameraFeed(on_frame=_on_frame_complete, seed=3)
+    camera.start()
 
     try:
         time.sleep(6.0)
     except KeyboardInterrupt:
         pass
     finally:
-        manager.stop()
-        reassembler.stop()
+        camera.stop()
         service.close()
         avg_ms = (stats["total_latency_s"] / stats["frames"] * 1000) if stats["frames"] else 0.0
         logger.info(
