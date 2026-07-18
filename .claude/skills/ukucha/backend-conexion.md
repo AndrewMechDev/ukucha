@@ -37,6 +37,27 @@ precision del GPS (fix/sats), que se implementara en el firmware mas
 adelante — mientras tanto llega solo `{lat, lon}` y el resto del pipeline
 (deteccion, WS, persistencia) funciona igual.
 
+### Convencion: limpiar `telemetry_history` cuando cambia el wire format
+
+`telemetry_history.data` es `jsonb` generico (`packet.model_dump()`
+completo, sin columnas por sensor -- ver `supabase_schema.sql`). Esto
+significa que un cambio de forma del paquete (como el de `dust_ppm` ->
+`pir_detected` de esta misma ronda) **no requiere migracion de schema**,
+pero sí deja conviviendo en la misma tabla filas viejas con una forma de
+JSON y filas nuevas con otra. Nada en el schema fuerza consistencia ahi.
+
+Regla practica: cada vez que el formato de `TelemetryPacket` cambie de
+forma incompatible (rename/quitar un campo, no solo agregar uno nuevo),
+limpiar `telemetry_history` antes de la siguiente tanda de pruebas reales:
+
+```sql
+truncate table telemetry_history restart identity;
+```
+
+`detection_events` y `command_log` no tienen este problema en la practica
+(sus columnas son fijas, no un blob `jsonb` de forma variable), pero vale
+la misma logica si alguna vez cambia su estructura de forma incompatible.
+
 ### Confirmacion definitiva: no hay ni va a haber USB
 
 El compañero de hardware confirmo que la conexion es **100% WiFi,
