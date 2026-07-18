@@ -13,6 +13,9 @@ env/
 node_modules/
 frontend/dist/
 
+# TypeScript
+*.tsbuildinfo
+
 # IDE
 .vscode/
 .idea/

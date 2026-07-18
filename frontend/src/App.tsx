@@ -1,10 +1,17 @@
-function App() {
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Layout from "./components/Layout";
+import Home from "./pages/Home";
+import NotFound from "./pages/NotFound";
+
+export default function App() {
   return (
-    <main>
-      <h1>Ukucha</h1>
-      <p>Bienvenido a Ukucha</p>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;
