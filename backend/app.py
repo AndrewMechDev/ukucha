@@ -160,6 +160,7 @@ def create_app() -> FastAPI:
             return
 
         for event in event_detector.detect(output):
+            logger.info("EVENTO DETECTADO: %s (frame_id=%s)", event["tipo"], event["frame_id"])
             persistence_worker.save_event(event)
 
         loop = getattr(app.state, "loop", None)

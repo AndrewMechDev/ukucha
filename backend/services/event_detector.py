@@ -24,13 +24,13 @@ class EventDetector:
         if output.fall.hay_critica and not self._prev_critica:
             events.append({
                 "tipo": "caida_critica", "frame_id": output.frame_id,
-                "timestamp": output.timestamp, "gps": gps,
+                "event_timestamp": output.timestamp, "gps": gps,
                 "detalle": "persona en el suelo por tiempo prolongado",
             })
         elif output.fall.hay_alerta and not self._prev_alerta:
             events.append({
                 "tipo": "caida_detectada", "frame_id": output.frame_id,
-                "timestamp": output.timestamp, "gps": gps,
+                "event_timestamp": output.timestamp, "gps": gps,
             })
         self._prev_alerta = output.fall.hay_alerta
         self._prev_critica = output.fall.hay_critica
@@ -39,7 +39,7 @@ class EventDetector:
         if rubble_now and not self._prev_rubble:
             events.append({
                 "tipo": "persona_bajo_escombros", "frame_id": output.frame_id,
-                "timestamp": output.timestamp, "gps": gps,
+                "event_timestamp": output.timestamp, "gps": gps,
                 "detalle": f"{output.fusion.n_rubble_victims} victima(s)",
             })
         self._prev_rubble = rubble_now
