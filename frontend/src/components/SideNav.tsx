@@ -83,6 +83,7 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
                 setActiveItem(item.id);
                 if (item.id === "fleet") navigate("/");
                 if (item.id === "alerts") navigate("/alerts");
+                if (item.id === "settings") navigate("/settings");
               }}
               aria-current={activeItem === item.id ? "page" : undefined}
               aria-label={collapsed ? item.label : undefined}
