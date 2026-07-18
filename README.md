@@ -44,16 +44,27 @@ decisiones de diseño y como regenerar cada modulo.
 ```bash
 py -3.12 -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install --no-deps -r requirements.txt
 
 # Modo mock (default, sin hardware ni Supabase)
 uvicorn backend.app:app --host 0.0.0.0 --port 8000
 ```
 
-Sin variables de entorno, arranca con `MockTransport` (trafico sintetico) y
-`NullPersistenceAdapter` (no persiste nada). Para hardware real y Supabase,
-copiar `env.example` a `.env` y completar — ver
-`.claude/skills/ukucha/backend-conexion.md`.
+**Importante:** usar siempre `pip install --no-deps -r requirements.txt`
+(nunca sin `--no-deps`). `requirements.txt` es un freeze completo con
+todas las dependencias transitivas ya pinneadas -- si se instala sin
+`--no-deps`, pip resuelve la metadata de `ultralytics` (que declara
+`opencv-python` como dependencia) y termina instalando `opencv-python`
+junto a `opencv-contrib-python`, pisando el modulo `cv2` entre ambos
+paquetes (bug ya corregido una vez, ver comentario en `requirements.txt`
+y `.claude/skills/ukucha/backend-conexion.md`). Con `--no-deps`,
+`pip check` marca `opencv-python ... not installed` — es el resultado
+esperado, no un error.
+
+Sin variables de entorno, arranca con `MockTransport` + `MockCameraFeed`
+(trafico y video sinteticos) y `NullPersistenceAdapter` (no persiste
+nada). Para hardware real (UDP + Supabase), copiar `env.example` a `.env`
+y completar — ver `.claude/skills/ukucha/backend-conexion.md`.
 
 ### Frontend
 
