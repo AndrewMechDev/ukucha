@@ -17,6 +17,7 @@ import itertools
 import logging
 import threading
 import time
+from dataclasses import dataclass
 from typing import Callable, Dict, Optional, Type
 
 from pydantic import BaseModel, ValidationError
@@ -42,6 +43,18 @@ _COMMAND_PARAM_SCHEMA: Dict[str, Type[BaseModel]] = {
 }
 
 
+@dataclass
+class DispatchResult:
+    """El wire format (ControlCommand) no lleva cmd_id/command -- el
+    firmware real no los necesita. DispatchResult los expone para que la
+    capa API (ws_commands.py) pueda responder al panel sin conocer el
+    formato de bajada."""
+
+    cmd_id: int
+    command: str
+    control: ControlCommand
+
+
 class CommandService:
     def __init__(
         self,
@@ -56,7 +69,7 @@ class CommandService:
         self._pending: Dict[int, dict] = {}  # cmd_id -> {"timer", "command"}
         self._lock = threading.Lock()
 
-    def dispatch(self, command: str, params: dict) -> ControlCommand:
+    def dispatch(self, command: str, params: dict) -> DispatchResult:
         schema = _COMMAND_PARAM_SCHEMA.get(command)
         if schema is None:
             raise ValueError(f"Comando desconocido: {command!r}")
@@ -73,7 +86,7 @@ class CommandService:
             "cmd_id": cmd_id, "command": command, "params": validated.model_dump(),
             "event": "sent", "status": None, "ts": time.time(),
         })
-        return cmd
+        return DispatchResult(cmd_id=cmd_id, command=command, control=cmd)
 
     def on_ack(self, cmd_id: int, status: str) -> None:
         """El firmware actual nunca llama a esto (no emite ack). Se deja
