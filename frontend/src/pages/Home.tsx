@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AudioMetricCard,
@@ -27,6 +27,7 @@ const units: Unit[] = [
 
 const icons = {
   link: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 13 4-4M8.5 15.5l-2 2a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0M15.5 8.5l2-2a3.5 3.5 0 0 1 5 5l-4 4a3.5 3.5 0 0 1-5 0" /></svg>,
+  wifi: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8.5a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0M12 19h.01" /></svg>,
   plus: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>,
   close: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>,
 };
@@ -69,14 +70,73 @@ function EmptyFleetState({ onLink }: { onLink: () => void }) {
   );
 }
 
+type LinkStep = "methods" | "scanning" | "results" | "success";
+
 function LinkUnitModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState<LinkStep>("methods");
+
+  useEffect(() => {
+    if (step !== "scanning") return undefined;
+    const timer = window.setTimeout(() => setStep("results"), 2200);
+    return () => window.clearTimeout(timer);
+  }, [step]);
+
+  const connectUnit = () => setStep("success");
+
+  if (step === "scanning") {
+    return (
+      <div className="fleet-modal-backdrop" role="presentation">
+        <section className="fleet-modal fleet-modal--scanner" role="dialog" aria-modal="true" aria-labelledby="scan-title">
+          <header><div><p className="eyebrow">NUEVA CONEXIÓN</p><h2 id="scan-title">Buscando Ukuchas</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
+          <div className="fleet-scanner" aria-live="polite">
+            <div className="fleet-scanner__waves"><span /><span /><span /><b>{icons.wifi}</b></div>
+            <strong>Escaneando frecuencias de telemetría...</strong>
+            <span>Buscando unidades disponibles en tu red Wi‑Fi</span>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (step === "results") {
+    return (
+      <div className="fleet-modal-backdrop" role="presentation">
+        <section className="fleet-modal fleet-modal--results" role="dialog" aria-modal="true" aria-labelledby="results-title">
+          <header><div><p className="eyebrow">RED LOCAL</p><h2 id="results-title">Ukuchas disponibles</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
+          <p className="fleet-modal__description">Selecciona una unidad para conectarla a tu flota.</p>
+          <div className="fleet-discovered-list">
+            <button type="button" className="fleet-discovered-unit" onClick={connectUnit}><span className="fleet-discovered-unit__signal">⌁</span><span><strong>Ukucha-05</strong><small>Zona Norte · Señal excelente</small></span><b>Conectar →</b></button>
+            <button type="button" className="fleet-discovered-unit" onClick={connectUnit}><span className="fleet-discovered-unit__signal">⌁</span><span><strong>Ukucha-06</strong><small>Zona Sur · Señal buena</small></span><b>Conectar →</b></button>
+          </div>
+          <button className="secondary-button fleet-rescan" type="button" onClick={() => setStep("scanning")}>↻ Buscar de nuevo</button>
+        </section>
+      </div>
+    );
+  }
+
+  if (step === "success") {
+    return (
+      <div className="fleet-modal-backdrop" role="presentation">
+        <section className="fleet-modal fleet-modal--success" role="dialog" aria-modal="true" aria-labelledby="success-title">
+          <div className="fleet-success-icon">✓</div>
+          <p className="eyebrow">CONEXIÓN COMPLETADA</p>
+          <h2 id="success-title">Ukucha-05 conectada</h2>
+          <p className="fleet-modal__description">La unidad ya está transmitiendo datos en tu red Wi‑Fi.</p>
+          <button className="primary-button" type="button" onClick={onClose}>Ver unidad</button>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="fleet-modal-backdrop" role="presentation">
       <section className="fleet-modal" role="dialog" aria-modal="true" aria-labelledby="link-unit-title">
         <header><div><p className="eyebrow">NUEVA CONEXIÓN</p><h2 id="link-unit-title">Vincular Nueva Unidad</h2></div><button type="button" onClick={onClose} aria-label="Cerrar modal">{icons.close}</button></header>
-        <p className="fleet-modal__description">Introduce el identificador de la unidad para añadirla a la flota.</p>
-        <label className="fleet-field"><span>ID DE UNIDAD</span><input autoFocus placeholder="Ej. UKUCHA-05" /></label>
-        <div className="fleet-modal__actions"><button className="secondary-button" type="button" onClick={onClose}>Cancelar</button><button className="primary-button" type="button" onClick={onClose}>Vincular unidad</button></div>
+        <p className="fleet-modal__description">Busca las unidades disponibles en tu red local para añadirlas a la flota.</p>
+        <div className="fleet-connection-methods">
+          <button type="button" className="fleet-connection-method" onClick={() => setStep("scanning")}><span className="fleet-method-icon">{icons.wifi}</span><span><strong>Vía Wi‑Fi</strong><small>Detección automática en la red local</small></span><b>→</b></button>
+          <button type="button" className="fleet-connection-method fleet-connection-method--disabled" disabled><span className="fleet-method-icon">ᛒ</span><span><strong>Vía Bluetooth</strong><small>Próximamente disponible</small></span><b>→</b></button>
+        </div>
       </section>
     </div>
   );

@@ -4229,6 +4229,176 @@ body h1,
   background: var(--offline);
 }
 
+/* Wi-Fi discovery flow */
+.fleet-connection-methods {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.fleet-connection-method,
+.fleet-discovered-unit {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  color: var(--on-surface);
+  text-align: left;
+  background: var(--surface-high);
+  border: 1px solid var(--outline);
+  border-radius: var(--shape-instrument-md);
+  cursor: pointer;
+}
+
+.fleet-connection-method:hover,
+.fleet-discovered-unit:hover {
+  border-color: var(--accent);
+}
+
+.fleet-connection-method--disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}
+
+.fleet-connection-method--disabled:hover {
+  border-color: var(--outline);
+}
+
+.fleet-method-icon,
+.fleet-discovered-unit__signal {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  border-radius: var(--shape-instrument-md);
+  font-size: 27px;
+}
+
+.fleet-method-icon svg,
+.fleet-scanner__waves svg {
+  width: 27px;
+  height: 27px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.fleet-connection-method > span:nth-child(2),
+.fleet-discovered-unit > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  flex: 1;
+}
+
+.fleet-connection-method strong,
+.fleet-discovered-unit strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.fleet-connection-method small,
+.fleet-discovered-unit small {
+  color: var(--on-surface-variant);
+  font-size: 12px;
+}
+
+.fleet-connection-method > b,
+.fleet-discovered-unit > b {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.fleet-modal--scanner {
+  width: min(540px, 100%);
+}
+
+.fleet-scanner {
+  display: grid;
+  min-height: 290px;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  margin-top: 14px;
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+
+.fleet-scanner__waves {
+  position: relative;
+  display: grid;
+  width: 190px;
+  height: 190px;
+  place-items: center;
+  margin-bottom: 8px;
+}
+
+.fleet-scanner__waves span {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 1px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  border-radius: 50%;
+  animation: fleet-scan-wave 2.4s ease-out infinite;
+}
+
+.fleet-scanner__waves span:nth-child(2) { width: 74%; height: 74%; animation-delay: .35s; }
+.fleet-scanner__waves span:nth-child(3) { width: 48%; height: 48%; animation-delay: .7s; }
+.fleet-scanner__waves b { z-index: 1; display: grid; place-items: center; color: var(--accent); font-size: 30px; }
+.fleet-scanner strong { color: var(--on-surface); font-family: monospace; font-size: 16px; }
+.fleet-scanner > span { font-size: 13px; }
+
+@keyframes fleet-scan-wave {
+  0%, 100% { opacity: .3; transform: scale(.94); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.fleet-discovered-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.fleet-discovered-unit__signal {
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+  font-size: 23px;
+}
+
+.fleet-rescan {
+  margin-top: 16px;
+}
+
+.fleet-modal--success {
+  display: grid;
+  justify-items: center;
+  padding: 34px 24px;
+  text-align: center;
+}
+
+.fleet-success-icon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  margin-bottom: 18px;
+  color: var(--bg-base);
+  background: var(--safe);
+  border-radius: 50%;
+  font-size: 36px;
+  font-weight: 800;
+}
+
+.fleet-modal--success h2 { margin-top: 10px; font-size: 20px; }
+.fleet-modal--success .fleet-modal__description { margin: 12px 0 22px; }
+
 .connection-metric-card div {
   display: grid;
   gap: 3px;
