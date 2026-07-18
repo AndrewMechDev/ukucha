@@ -10,6 +10,7 @@ import {
 } from "../components/TelemetryCards";
 import { useLanguage } from "../components/LanguageContext";
 import { useUnitStream } from "../hooks/useUnitStream";
+import { useGoldenHours } from "../hooks/useGoldenHours";
 import { apiPost } from "../services/api";
 
 type UnitInfo = { name: string; zone: string };
@@ -64,6 +65,7 @@ export default function UnitDashboard() {
   const [detectionOpen, setDetectionOpen] = useState(false);
   const [sensorsCollapsed, setSensorsCollapsed] = useState(false);
   const { data: frame, status: streamStatus } = useUnitStream();
+  const goldenHours = useGoldenHours(unitId);
   const [pressedKeys, setPressedKeys] = useState({
     w: false,
     a: false,
@@ -263,7 +265,7 @@ export default function UnitDashboard() {
           </nav>
           {flyout && <UnitFlyout type={flyout} onClose={() => setFlyout(null)} />}
         </div>
-        <div className="golden-hours golden-hours--mission"><span>GOLDEN HOURS</span><strong>01:42:18</strong></div>
+        <div className={`golden-hours golden-hours--mission${goldenHours.expired ? " is-expired" : ""}`}><span>GOLDEN HOURS</span><strong>{goldenHours.label}</strong></div>
         <aside className={`unit-dashboard-sensors telemetry-deck${sensorsCollapsed ? " is-collapsed" : ""}`}>
           <header className="telemetry-deck__header">
             <div>

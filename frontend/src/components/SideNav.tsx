@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "./LanguageContext";
+import { useNotifications } from "./NotificationsContext";
 
 type SideNavProps = {
   collapsed: boolean;
@@ -12,12 +13,11 @@ type NavItem = {
   label: string;
   icon: string;
   route: string;
-  badge?: number;
 };
 
 const navItems: NavItem[] = [
   { id: "fleet", label: "Flota", icon: "deployed_code", route: "/" },
-  { id: "alerts", label: "Alertas", icon: "notifications", route: "/alerts", badge: 3 },
+  { id: "alerts", label: "Alertas", icon: "notifications", route: "/alerts" },
   { id: "settings", label: "Ajustes", icon: "settings", route: "/settings" },
 ];
 
@@ -51,6 +51,9 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language } = useLanguage();
+  const { unacknowledgedCount } = useNotifications();
+  const getBadge = (item: NavItem): number | undefined =>
+    item.id === "alerts" && unacknowledgedCount > 0 ? unacknowledgedCount : undefined;
   const panel = new URLSearchParams(location.search).get("panel");
   const currentItem: NavItem["id"] = panel === "alerts"
     ? "alerts"
@@ -99,9 +102,9 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
             >
               <span className="nav-item__icon material-symbols-rounded" aria-hidden="true">{item.icon}</span>
               {!collapsed && <span className="nav-item__label">{getLabel(item)}</span>}
-              {item.badge !== undefined && (
-                <span className="nav-item__badge" aria-label={`${item.badge} ${t("alertas").toLowerCase()}`}>
-                  {item.badge}
+              {getBadge(item) !== undefined && (
+                <span className="nav-item__badge" aria-label={`${getBadge(item)} ${t("alertas").toLowerCase()}`}>
+                  {getBadge(item)}
                 </span>
               )}
               {collapsed && <span className="glass-tooltip">{getLabel(item)}</span>}
@@ -119,9 +122,9 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
             >
               <span className="nav-item__icon material-symbols-rounded" aria-hidden="true">{item.icon}</span>
               {!collapsed && <span className="nav-item__label">{getLabel(item)}</span>}
-              {item.badge !== undefined && (
-                <span className="nav-item__badge" aria-label={`${item.badge} ${t("alertas").toLowerCase()}`}>
-                  {item.badge}
+              {getBadge(item) !== undefined && (
+                <span className="nav-item__badge" aria-label={`${getBadge(item)} ${t("alertas").toLowerCase()}`}>
+                  {getBadge(item)}
                 </span>
               )}
               {collapsed && <span className="glass-tooltip">{getLabel(item)}</span>}
@@ -141,7 +144,7 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
           >
             <span className="nav-item__icon material-symbols-rounded" aria-hidden="true">{item.icon}</span>
             <span>{getLabel(item)}</span>
-            {item.badge !== undefined && <span className="bottom-nav__badge">{item.badge}</span>}
+            {getBadge(item) !== undefined && <span className="bottom-nav__badge">{getBadge(item)}</span>}
           </button>
         ))}
       </nav>
