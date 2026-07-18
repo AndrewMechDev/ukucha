@@ -1,5 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  AudioMetricCard,
+  EnvironmentMetricCard,
+  LocationMetricCard,
+  type TelemetrySnapshot,
+} from "../components/TelemetryCards";
 
 type UnitStatus = "safe" | "caution" | "critical" | "offline";
 
@@ -8,62 +14,47 @@ type Unit = {
   zone: string;
   status: UnitStatus;
   statusLabel: string;
-  battery: string;
-  signal: string;
   updated: string;
-  hasVideo: boolean;
+  telemetry: TelemetrySnapshot;
 };
 
 const units: Unit[] = [
-  { id: "Ukucha-01", zone: "Zona Norte", status: "safe", statusLabel: "SEGURO", battery: "74%", signal: "Tether estable", updated: "12s", hasVideo: true },
-  { id: "Ukucha-02", zone: "Zona Sur", status: "caution", statusLabel: "PRECAUCIÓN", battery: "51%", signal: "Señal débil", updated: "38s", hasVideo: true },
-  { id: "Ukucha-03", zone: "Zona Este", status: "critical", statusLabel: "CRÍTICO", battery: "23%", signal: "Tether estable", updated: "4s", hasVideo: true },
-  { id: "Ukucha-04", zone: "Zona Oeste", status: "offline", statusLabel: "OFFLINE", battery: "—", signal: "Sin señal", updated: "18m", hasVideo: false },
+  { id: "Ukucha-01", zone: "Zona Norte", status: "safe", statusLabel: "SEGURO", updated: "hace 12s", telemetry: { audio: { left: 6.5, right: 5.6 }, environment: { temperatureC: 28.4, humidityPercent: 34.2, pressureHpa: 783.1 }, gps: { latitude: -16.3988, longitude: -71.5369, valid: true } } },
+  { id: "Ukucha-02", zone: "Zona Sur", status: "caution", statusLabel: "PRECAUCIÓN", updated: "hace 38s", telemetry: { audio: { left: 12.4, right: 10.8 }, environment: { temperatureC: 29.1, humidityPercent: 36.8, pressureHpa: 782.9 }, gps: { latitude: -16.3994, longitude: -71.5358, valid: true } } },
+  { id: "Ukucha-03", zone: "Zona Este", status: "critical", statusLabel: "CRÍTICO", updated: "hace 4s", telemetry: { audio: { left: 14.3, right: 12.7 }, environment: { temperatureC: 29.2, humidityPercent: 33.5, pressureHpa: 783.0 }, gps: { latitude: -16.3979, longitude: -71.5347, valid: true } } },
+  { id: "Ukucha-04", zone: "Zona Oeste", status: "offline", statusLabel: "OFFLINE", updated: "hace 18m", telemetry: { audio: { left: null, right: null }, environment: { temperatureC: null, humidityPercent: null, pressureHpa: null }, gps: { latitude: null, longitude: null, valid: false } } },
 ];
 
 const icons = {
   link: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 13 4-4M8.5 15.5l-2 2a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0M15.5 8.5l2-2a3.5 3.5 0 0 1 5 5l-4 4a3.5 3.5 0 0 1-5 0" /></svg>,
-  signal: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h.01M7 14a8 8 0 0 1 10 0M4.5 10.5a12 12 0 0 1 15 0M12 21h.01" /></svg>,
-  offline: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 5.1A9 9 0 0 1 21 12M5.1 10.6A9 9 0 0 0 12 21M8.5 8.5A5 5 0 0 1 15.5 15.5M8 17l-2 2M16 7l2-2" /></svg>,
   plus: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>,
   close: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>,
 };
 
-function VideoThumbnail({ unit }: { unit: Unit }) {
-  if (!unit.hasVideo) {
-    return <div className="fleet-thumbnail fleet-thumbnail--offline"><span>{icons.offline}</span><p>SIN SEÑAL</p></div>;
-  }
-
-  return (
-    <div className={`fleet-thumbnail fleet-thumbnail--${unit.status}`}>
-      <span className="fleet-thumbnail__label">LIVE · CAM 03</span>
-      <div className="fleet-thumbnail__texture" aria-hidden="true" />
-      <span className="fleet-bracket fleet-bracket--tl" /><span className="fleet-bracket fleet-bracket--tr" /><span className="fleet-bracket fleet-bracket--bl" /><span className="fleet-bracket fleet-bracket--br" />
-      <span className="fleet-thumbnail__detection">PERSONA 92%</span>
-    </div>
-  );
-}
-
 function UnitCard({ unit, onSelect }: { unit: Unit; onSelect: (unit: Unit) => void }) {
   return (
-    <button
+    <article
       className={`fleet-unit-card fleet-unit-card--${unit.status}`}
-      type="button"
-      disabled={unit.status === "offline"}
+      role={unit.status === "offline" ? undefined : "link"}
+      tabIndex={unit.status === "offline" ? -1 : 0}
       onClick={() => onSelect(unit)}
+      onKeyDown={(event) => {
+        if (unit.status !== "offline" && (event.key === "Enter" || event.key === " ")) onSelect(unit);
+      }}
       title={unit.status === "offline" ? "Sin señal" : `Abrir dashboard de ${unit.id}`}
       aria-label={`${unit.id}, ${unit.statusLabel}, ${unit.zone}`}
     >
-      <VideoThumbnail unit={unit} />
-      <div className="fleet-unit-card__body">
-        <div className="fleet-unit-card__heading"><div><h2>{unit.id}</h2><p>{unit.zone}</p></div><span className={`fleet-status-tag fleet-status-tag--${unit.status}`}>{unit.statusLabel}</span></div>
-        <div className="fleet-unit-card__meta">
-          <span><b>BATERÍA</b><strong>{unit.battery}</strong></span>
-          <span><b>SEÑAL</b><strong>{unit.signal}</strong></span>
-          <span><b>ACTUALIZACIÓN</b><strong>hace {unit.updated}</strong></span>
-        </div>
+      <header className="fleet-unit-card__heading">
+        <div><p className="fleet-unit-card__overline">UNIDAD DE CAMPO</p><h2>{unit.id}</h2><span>{unit.zone}</span></div>
+        <div className="fleet-unit-card__status"><span className={`fleet-status-tag fleet-status-tag--${unit.status}`}>{unit.statusLabel}</span><time>{unit.updated}</time></div>
+      </header>
+      <div className="fleet-unit-card__metrics">
+        <EnvironmentMetricCard temperature={unit.telemetry.environment.temperatureC} humidity={unit.telemetry.environment.humidityPercent} size="compact" />
+        <AudioMetricCard left={unit.telemetry.audio.left} right={unit.telemetry.audio.right} size="compact" />
       </div>
-    </button>
+      <LocationMetricCard latitude={unit.telemetry.gps.latitude} longitude={unit.telemetry.gps.longitude} valid={unit.telemetry.gps.valid} zone={unit.zone} size="compact" />
+      <footer className="fleet-unit-card__footer"><span>PRESIÓN</span><strong>{unit.telemetry.environment.pressureHpa === null ? "N/D" : `${unit.telemetry.environment.pressureHpa.toFixed(1)} hPa`}</strong><b>{unit.status === "offline" ? "SIN DATOS" : "ABRIR DASHBOARD →"}</b></footer>
+    </article>
   );
 }
 
@@ -102,7 +93,7 @@ export default function Home() {
   return (
     <section className="fleet-screen">
       <header className="fleet-header">
-        <div><p className="eyebrow">OPERACIÓN EN CURSO</p><h1>Flota</h1><p className="fleet-summary"><strong>4</strong> unidades activas · <strong>1</strong> en alerta</p></div>
+        <div><p className="eyebrow">OPERACIÓN EN CURSO</p><h1>Flota</h1><p className="fleet-summary"><strong>3</strong> unidades activas · <strong>1</strong> en alerta</p></div>
         <button className="primary-button fleet-link-button" type="button" onClick={() => setModalOpen(true)}>{icons.plus}<span>Vincular unidad</span></button>
       </header>
       <div className="fleet-grid" aria-label="Unidades de la flota">

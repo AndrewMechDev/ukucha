@@ -1048,6 +1048,25 @@ body {
   transform: translateY(-50%);
 }
 
+.mission-map__coordinate {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  color: var(--ai);
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 14px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit-connection--stale {
+  color: var(--caution) !important;
+}
+
+.unit-connection--offline {
+  color: var(--offline) !important;
+}
+
 .mission-video-texture::after {
   position: absolute;
   inset: 12% 18% 8%;
@@ -3722,5 +3741,557 @@ body h1,
 
   .fleet-unit-card:hover {
     transform: none;
+  }
+}
+
+/* Telemetry bento cards */
+.telemetry-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 14px;
+  background: var(--surface-high);
+  border: 1px solid var(--outline);
+  border-radius: var(--shape-instrument-lg);
+}
+
+.telemetry-card > header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.telemetry-card__label {
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+}
+
+.telemetry-card__tag {
+  padding: 5px 7px;
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline);
+  border-radius: var(--shape-instrument-sm);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.telemetry-card__tag.is-safe {
+  color: var(--safe);
+  border-color: var(--safe);
+}
+
+.telemetry-card__tag.is-offline {
+  color: var(--offline);
+  border-color: var(--offline);
+}
+
+.telemetry-card__status-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--safe);
+  border-radius: var(--shape-pill);
+}
+
+.telemetry-card__status-dot.is-offline {
+  background: var(--offline);
+}
+
+.telemetry-card__hero {
+  position: relative;
+  margin-top: auto;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 38px !important;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.telemetry-card__hero::after {
+  display: block;
+  width: 34px;
+  height: 3px;
+  margin-top: 10px;
+  content: "";
+  background: var(--accent);
+  border-radius: var(--shape-pill);
+}
+
+.telemetry-card__hero small {
+  margin-left: 5px;
+  color: var(--on-surface-variant);
+  font-family: "DM Sans", sans-serif;
+  font-size: 15px !important;
+  font-weight: 500;
+}
+
+.telemetry-card__caption {
+  margin-top: 9px;
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.telemetry-card--compact {
+  min-height: 154px;
+  padding: 12px;
+}
+
+.telemetry-card--compact .telemetry-card__hero {
+  font-size: 34px !important;
+}
+
+.environment-metric-card {
+  min-height: 174px;
+  background: var(--surface-high);
+}
+
+.environment-metric-card footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--outline);
+}
+
+.environment-metric-card footer strong {
+  color: var(--accent);
+}
+
+.environment-metric-card footer span {
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.environment-metric-card footer strong {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 17px !important;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-metric-card {
+  min-height: 174px;
+  color: var(--on-surface);
+  background: var(--bg-base);
+}
+
+.audio-waveform {
+  width: calc(100% + 28px);
+  height: 58px;
+  margin: auto -14px 4px;
+}
+
+.audio-waveform polyline,
+.audio-waveform line {
+  fill: none;
+  stroke: var(--on-surface);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.audio-waveform polyline {
+  stroke: var(--accent);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent) 45%, transparent));
+}
+
+.audio-waveform .audio-waveform__empty {
+  stroke: var(--outline);
+  stroke-dasharray: 5 6;
+}
+
+.audio-metric-card__values {
+  display: flex;
+  gap: 18px;
+}
+
+.audio-metric-card__values span {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.audio-metric-card__values b {
+  color: var(--on-surface-variant);
+  font-size: 14px;
+}
+
+.audio-metric-card__values strong {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 24px !important;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pressure-metric-card {
+  min-height: 166px;
+}
+
+.pressure-scale {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 18px;
+}
+
+.pressure-scale span {
+  height: 12px;
+  background: var(--on-surface-variant);
+  border-radius: var(--shape-instrument-sm);
+  opacity: 0.42;
+}
+
+.pressure-scale span.is-active {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.pressure-scale.is-unavailable {
+  opacity: 0.25;
+}
+
+.location-metric-card {
+  min-height: 236px;
+  padding: 0;
+  background: var(--bg-base);
+}
+
+.location-metric-card > header {
+  padding: 14px 14px 0;
+}
+
+.location-map-preview {
+  position: relative;
+  min-height: 148px;
+  flex: 1;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.location-map-preview svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.map-road {
+  fill: none;
+  stroke: var(--outline);
+  stroke-width: 7;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-road--two {
+  stroke-width: 4;
+}
+
+.map-route-preview {
+  fill: none;
+  stroke: var(--accent);
+  stroke-dasharray: 6 5;
+  stroke-linecap: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.location-map-preview__pin {
+  position: absolute;
+  top: 47%;
+  left: 56%;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  background: color-mix(in srgb, var(--safe) 18%, var(--surface));
+  border: 1px solid var(--safe);
+  border-radius: var(--shape-pill);
+  transform: translate(-50%, -50%);
+}
+
+.location-map-preview__pin i {
+  width: 9px;
+  height: 9px;
+  background: var(--safe);
+  border-radius: var(--shape-pill);
+}
+
+.location-map-preview__zone {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  padding: 5px 7px;
+  color: var(--on-surface);
+  background: var(--hud-bg);
+  border-radius: var(--shape-instrument-sm);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.location-metric-card__coords {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px 14px;
+  color: var(--on-surface-variant);
+  border-top: 1px solid var(--outline);
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.location-metric-card.telemetry-card--compact {
+  min-height: 196px;
+}
+
+.location-metric-card.telemetry-card--compact .location-map-preview {
+  min-height: 108px;
+}
+
+.connection-metric-card {
+  display: grid;
+  min-height: 74px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.connection-metric-card__pulse {
+  width: 10px;
+  height: 10px;
+  background: var(--on-surface-variant);
+  border-radius: var(--shape-pill);
+}
+
+.connection-metric-card--online .connection-metric-card__pulse {
+  background: var(--safe);
+}
+
+.connection-metric-card--stale .connection-metric-card__pulse {
+  background: var(--caution);
+}
+
+.connection-metric-card--offline .connection-metric-card__pulse {
+  background: var(--offline);
+}
+
+.connection-metric-card div {
+  display: grid;
+  gap: 3px;
+}
+
+.connection-metric-card div strong,
+.connection-metric-card time {
+  color: var(--on-surface);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.connection-metric-card time {
+  color: var(--on-surface-variant);
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+/* Fleet card composition */
+.fleet-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fleet-unit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.fleet-unit-card__heading {
+  padding: 4px 2px 2px;
+}
+
+.fleet-unit-card__heading > div:first-child {
+  min-width: 0;
+}
+
+.fleet-unit-card__overline {
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.fleet-unit-card__heading h2 {
+  margin-top: 4px;
+  font-size: 19px !important;
+}
+
+.fleet-unit-card__heading > div:first-child > span {
+  display: block;
+  margin-top: 3px;
+  color: var(--on-surface-variant);
+  font-size: 14px;
+}
+
+.fleet-unit-card__status {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fleet-unit-card__status time {
+  color: var(--on-surface-variant);
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-unit-card__metrics {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 10px;
+}
+
+.fleet-unit-card__footer {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px 2px;
+}
+
+.fleet-unit-card__footer span {
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.fleet-unit-card__footer strong {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 15px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-unit-card__footer b {
+  justify-self: end;
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.fleet-unit-card:hover .fleet-unit-card__footer b,
+.fleet-unit-card:focus-visible .fleet-unit-card__footer b {
+  color: var(--accent);
+}
+
+.fleet-unit-card--offline .telemetry-card__hero::after {
+  background: var(--offline);
+}
+
+/* Dashboard telemetry deck */
+.unit-dashboard-sensors.telemetry-deck {
+  display: flex;
+  width: 320px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px 24px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.telemetry-deck__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px 4px;
+}
+
+.telemetry-deck__header div {
+  display: grid;
+  gap: 3px;
+}
+
+.telemetry-deck__header span {
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.telemetry-deck__header strong {
+  font-size: 17px !important;
+  font-weight: 600;
+}
+
+.telemetry-deck__header b {
+  padding: 5px 7px;
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline);
+  border-radius: var(--shape-instrument-sm);
+  font-size: 14px;
+}
+
+.telemetry-deck > .telemetry-card {
+  flex: 0 0 auto;
+}
+
+.golden-hours--mission {
+  right: 344px;
+}
+
+.unit-dashboard-tts {
+  right: 336px;
+}
+
+.unit-camera-message {
+  right: 344px;
+}
+
+@media (min-width: 1600px) {
+  .fleet-screen {
+    max-width: 1500px;
+  }
+
+  .fleet-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .fleet-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 599px) {
+  .fleet-unit-card__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .unit-dashboard-sensors.telemetry-deck {
+    top: 112px;
+    width: min(82vw, 300px);
+  }
+
+  .golden-hours--mission {
+    right: 16px;
   }
 }
