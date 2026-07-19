@@ -113,17 +113,17 @@ export default function UnitDashboard() {
     let motorA = 0;
     let motorB = 0;
     if (w) {
-      motorA = 80;
-      motorB = 80;
+      motorA = 200;
+      motorB = 200;
     } else if (s) {
-      motorA = -80;
-      motorB = -80;
+      motorA = -200;
+      motorB = -200;
     } else if (a) {
-      motorA = -60;
-      motorB = 60;
+      motorA = -180;
+      motorB = 180;
     } else if (d) {
-      motorA = 60;
-      motorB = -60;
+      motorA = 180;
+      motorB = -180;
     }
     apiPost("/commands", {
       command: "set_actuators",
